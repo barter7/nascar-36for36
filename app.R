@@ -254,9 +254,9 @@ ui <- page_navbar(
       .card-header { font-family: Orbitron, sans-serif; font-size: 0.95em;
                      letter-spacing: 1px; color: #FFD700; background: #1a1a2e;
                      border-bottom: 1px solid #333; }
-      .stat-card { text-align: center; padding: 10px 8px; }
-      .stat-card .stat-value { font-family: Orbitron, sans-serif; font-size: 1.4em; font-weight: bold; }
-      .stat-card .stat-label { font-size: 0.8em; color: #888; }
+      .stat-card { text-align: center; padding: 8px 4px; }
+      .stat-card .stat-value { font-family: Orbitron, sans-serif; font-size: 1.1em; font-weight: bold; white-space: nowrap; }
+      .stat-card .stat-label { font-size: 0.75em; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .table { color: #e0e0e0; }
       .table thead th { color: #FFD700; font-family: Orbitron, sans-serif; font-size: 0.8em; }
       .sidebar { background: #12121f; border-right: 1px solid #333; }
@@ -495,11 +495,12 @@ server <- function(input, output, session) {
       n_completed <- length(completed)
       n_total <- length(races)
 
+      card_style <- "text-align:center;padding:10px 6px;border-radius:10px;white-space:nowrap;min-height:120px;display:flex;flex-direction:column;justify-content:center;"
+
       if (n_completed == 0) {
-        # No races completed in this stage
-        div(style = "text-align:center;padding:12px;background:#2a1015;border:2px solid #8B0000;border-radius:10px;",
+        div(style = paste0(card_style, "background:#2a1015;border:2px solid #8B0000;"),
           div(style = "font-family:Orbitron,sans-serif;font-size:0.75em;color:#888;", paste0("Stage ", stage_num)),
-          div(style = "font-family:Orbitron,sans-serif;font-size:0.85em;color:#666;margin-top:4px;", "TBD"),
+          div(style = "font-family:Orbitron,sans-serif;font-size:0.9em;color:#666;margin-top:4px;", "TBD"),
           div(style = "font-size:0.7em;color:#555;margin-top:2px;", paste0("0/", n_total, " races"))
         )
       } else {
@@ -510,16 +511,16 @@ server <- function(input, output, session) {
           arrange(desc(pts)) %>% slice(1)
 
         is_complete <- n_completed == n_total
-        label <- if (is_complete) "Winner" else "Current Leader"
+        label <- if (is_complete) "Winner" else "Leader"
         bg <- if (is_complete) "#0a2e0a" else "#2e2a05"
         border <- if (is_complete) "#228B22" else "#DAA520"
         name_color <- if (is_complete) "#4ADE80" else "#FFD700"
 
-        div(style = sprintf("text-align:center;padding:12px;background:%s;border:2px solid %s;border-radius:10px;", bg, border),
+        div(style = sprintf("%sbackground:%s;border:2px solid %s;", card_style, bg, border),
           div(style = "font-family:Orbitron,sans-serif;font-size:0.75em;color:#888;", paste0("Stage ", stage_num)),
           div(style = sprintf("font-family:Rajdhani,sans-serif;font-size:1em;font-weight:700;color:%s;margin-top:4px;", name_color), leader$participant),
           div(style = "font-size:0.8em;color:#ccc;", paste0(leader$pts, " pts")),
-          div(style = "font-size:0.7em;color:#888;margin-top:2px;", paste0(label, " (", n_completed, "/", n_total, ")"))
+          div(style = "font-size:0.65em;color:#888;margin-top:2px;", paste0(label, " (", n_completed, "/", n_total, ")"))
         )
       }
     })
