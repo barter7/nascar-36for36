@@ -274,6 +274,17 @@ ui <- page_navbar(
         uiOutput("best_value_card"),
         uiOutput("races_completed_card")
       ),
+      card(card_header("Stage Winners"),
+        layout_columns(col_widths = c(2, 2, 2, 2, 2, 2),
+          uiOutput("stage1_card"),
+          uiOutput("stage2_card"),
+          uiOutput("stage3_card"),
+          uiOutput("stage4_card"),
+          uiOutput("stage5_card"),
+          uiOutput("stage6_card")
+        )
+      ),
+      card(card_header("Points by Stage"), tableOutput("stage_table")),
       card(card_header("Cumulative Points"), plotOutput("cumulative_chart", height = "400px"))
     )
   ),
@@ -441,6 +452,83 @@ server <- function(input, output, session) {
       mutate(Rank = row_number(), Gap = max(`Total Points`) - `Total Points`) %>%
       select(Rank, Participant = participant, `Total Points`, Gap, Races, `Avg Pts`, Best, Worst)
   }, striped = TRUE, hover = TRUE, bordered = TRUE, align = "c")
+
+  # ---- Stage definitions ----
+  STAGES <- list(
+    "Stage 1" = 1:6, "Stage 2" = 7:12, "Stage 3" = 13:18,
+    "Stage 4" = 19:24, "Stage 5" = 25:30, "Stage 6" = 31:36
+  )
+
+  # ---- Points by Stage table ----
+  output$stage_table <- renderTable({
+    sc <- scores()
+    if (nrow(sc) == 0) return(data.frame(Message = "No data yet"))
+
+    stage_pts <- lapply(names(STAGES), function(stg) {
+      races <- STAGES[[stg]]
+      sc %>% filter(race_number %in% races) %>%
+        group_by(participant) %>%
+        summarise(pts = sum(points, na.rm = TRUE), .groups = "drop") %>%
+        rename(!!stg := pts)
+    })
+
+    tbl <- stage_pts[[1]]
+    for (i in 2:length(stage_pts)) {
+      tbl <- tbl %>% full_join(stage_pts[[i]], by = "participant")
+    }
+    tbl[is.na(tbl)] <- 0
+    tbl <- tbl %>%
+      mutate(Total = rowSums(across(starts_with("Stage")), na.rm = TRUE)) %>%
+      arrange(desc(Total)) %>%
+      rename(Participant = participant)
+    tbl
+  }, striped = TRUE, hover = TRUE, bordered = TRUE, align = "c")
+
+  # ---- Stage winner/leader cards ----
+  build_stage_card <- function(stage_num) {
+    renderUI({
+      sc <- scores()
+      races <- STAGES[[stage_num]]
+      completed <- intersect(races, completed_races())
+      n_completed <- length(completed)
+      n_total <- length(races)
+
+      if (n_completed == 0) {
+        # No races completed in this stage
+        div(style = "text-align:center;padding:12px;background:#2a1015;border:2px solid #8B0000;border-radius:10px;",
+          div(style = "font-family:Orbitron,sans-serif;font-size:0.75em;color:#888;", paste0("Stage ", stage_num)),
+          div(style = "font-family:Orbitron,sans-serif;font-size:0.85em;color:#666;margin-top:4px;", "TBD"),
+          div(style = "font-size:0.7em;color:#555;margin-top:2px;", paste0("0/", n_total, " races"))
+        )
+      } else {
+        stage_sc <- sc %>% filter(race_number %in% completed)
+        leader <- stage_sc %>%
+          group_by(participant) %>%
+          summarise(pts = sum(points, na.rm = TRUE), .groups = "drop") %>%
+          arrange(desc(pts)) %>% slice(1)
+
+        is_complete <- n_completed == n_total
+        label <- if (is_complete) "Winner" else "Current Leader"
+        bg <- if (is_complete) "#0a2e0a" else "#2e2a05"
+        border <- if (is_complete) "#228B22" else "#DAA520"
+        name_color <- if (is_complete) "#4ADE80" else "#FFD700"
+
+        div(style = sprintf("text-align:center;padding:12px;background:%s;border:2px solid %s;border-radius:10px;", bg, border),
+          div(style = "font-family:Orbitron,sans-serif;font-size:0.75em;color:#888;", paste0("Stage ", stage_num)),
+          div(style = sprintf("font-family:Rajdhani,sans-serif;font-size:1em;font-weight:700;color:%s;margin-top:4px;", name_color), leader$participant),
+          div(style = "font-size:0.8em;color:#ccc;", paste0(leader$pts, " pts")),
+          div(style = "font-size:0.7em;color:#888;margin-top:2px;", paste0(label, " (", n_completed, "/", n_total, ")"))
+        )
+      }
+    })
+  }
+
+  output$stage1_card <- build_stage_card(1)
+  output$stage2_card <- build_stage_card(2)
+  output$stage3_card <- build_stage_card(3)
+  output$stage4_card <- build_stage_card(4)
+  output$stage5_card <- build_stage_card(5)
+  output$stage6_card <- build_stage_card(6)
 
   # ---- Cumulative chart ----
   output$cumulative_chart <- renderPlot({
