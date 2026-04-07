@@ -1,37 +1,37 @@
-car_number,driver,team,manufacturer
-1,Ross Chastain,Trackhouse Racing,Chevrolet
-2,Austin Cindric,Team Penske,Ford
-3,Austin Dillon,Richard Childress Racing,Chevrolet
-4,Noah Gragson,Haas Factory Team,Chevrolet
-5,Kyle Larson,Hendrick Motorsports,Chevrolet
-6,Brad Keselowski,RFK Racing,Ford
-7,Daniel Suarez,Spire Motorsports,Chevrolet
-8,Kyle Busch,Richard Childress Racing,Chevrolet
-9,Chase Elliott,Hendrick Motorsports,Chevrolet
-10,Ty Dillon,Kaulig Racing,Chevrolet
-11,Denny Hamlin,Joe Gibbs Racing,Toyota
-12,Ryan Blaney,Team Penske,Ford
-14,AJ Allmendinger,Kaulig Racing,Chevrolet
-16,Chris Buescher,RFK Racing,Ford
-17,Chase Briscoe,Joe Gibbs Racing,Toyota
-19,Christopher Bell,Joe Gibbs Racing,Toyota
-20,Josh Berry,Joe Gibbs Racing,Toyota
-21,Harrison Burton,Wood Brothers Racing,Ford
-22,Joey Logano,Team Penske,Ford
-23,Bubba Wallace,23XI Racing,Toyota
-24,William Byron,Hendrick Motorsports,Chevrolet
-31,Todd Gilliland,Front Row Motorsports,Ford
-34,Michael McDowell,Front Row Motorsports,Ford
-38,Zane Smith,Front Row Motorsports,Ford
-41,Cole Custer,Haas Factory Team,Chevrolet
-42,John Hunter Nemechek,Legacy Motor Club,Toyota
-43,Erik Jones,Legacy Motor Club,Toyota
-45,Tyler Reddick,23XI Racing,Toyota
-47,Ricky Stenhouse Jr,Hyak Motorsports,Chevrolet
-48,Alex Bowman,Hendrick Motorsports,Chevrolet
-51,Cody Ware,Rick Ware Racing,Chevrolet
-54,Ty Gibbs,Joe Gibbs Racing,Toyota
-71,Carson Hocevar,Spire Motorsports,Chevrolet
-77,Michael McDowell,Spire Motorsports,Chevrolet
-88,Connor Zilisch,Trackhouse Racing,Chevrolet
-97,Shane van Gisbergen,Trackhouse Racing,Chevrolet
+car_number,driver,team,manufacturer,headshot_url,number_url
+1,Ross Chastain,Trackhouse Racing,Chevrolet,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/Ross-Chastain_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/1A%4010x-350x290.png
+2,Austin Cindric,Team Penske,Ford,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/Austin-Cindric_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/2A%4010x-350x290.png
+3,Austin Dillon,Richard Childress Racing,Chevrolet,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/Austin-Dillon_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/3A%4010x-350x290.png
+4,Noah Gragson,Front Row Motorsports,Ford,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/Noah-Gragson_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/4A%4010x-350x290.png
+5,Kyle Larson,Hendrick Motorsports,Chevrolet,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/Kyle-Larson_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/5A%4010x-350x290.png
+6,Brad Keselowski,RFK Racing,Ford,https://www.nascar.com/wp-content/uploads/sites/7/2025/02/20/Brad-Keselowski-Cropped-Version-Dimensions-1.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/6A%4010x-350x290.png
+7,Daniel Suarez,Spire Motorsports,Chevrolet,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/Daniel-Suarez_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/7A%4010x-350x290.png
+8,Kyle Busch,Richard Childress Racing,Chevrolet,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/Kyle-Busch_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/8A%4010x-350x290.png
+9,Chase Elliott,Hendrick Motorsports,Chevrolet,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/Chase-Elliott_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/9A%4010x-350x290.png
+10,Ty Dillon,Kaulig Racing,Chevrolet,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/Ty-Dillon_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/10A%4010x-350x290.png
+11,Denny Hamlin,Joe Gibbs Racing,Toyota,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/Denny-Hamlin_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/11A%4010x-350x290.png
+12,Ryan Blaney,Team Penske,Ford,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/Ryan-Blaney_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/12A%4010x-350x290.png
+14,AJ Allmendinger,Kaulig Racing,Chevrolet,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/AJ-Allmendinger_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/14A%4010x-350x290.png
+16,Chris Buescher,RFK Racing,Ford,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/Chris-Buescher_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/16A%4010x-350x290.png
+17,Chase Briscoe,Joe Gibbs Racing,Toyota,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/Chase-Briscoe_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/17A%4010x-350x290.png
+19,Christopher Bell,Joe Gibbs Racing,Toyota,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/Christopher-Bell_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/19A%4010x-350x290.png
+21,Josh Berry,Wood Brothers Racing,Ford,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/Josh-Berry_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/21A%4010x-350x290.png
+22,Joey Logano,Team Penske,Ford,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/Joey-Logano_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/22A%4010x-350x290.png
+23,Bubba Wallace,23XI Racing,Toyota,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/Bubba-Wallace_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/23A%4010x-350x290.png
+24,William Byron,Hendrick Motorsports,Chevrolet,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/William-Byron_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/24A%4010x-350x290.png
+34,Todd Gilliland,Front Row Motorsports,Ford,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/Todd-Gilliand_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/34A%4010x-350x290.png
+35,Riley Herbst,23XI Racing,Toyota,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/Riley-Herbst_resized-1.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/35A%4010x-350x290.png
+38,Zane Smith,Front Row Motorsports,Ford,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/Zane-Smith_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/38A%4010x-350x290.png
+41,Cole Custer,Haas Factory Team,Chevrolet,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/Cole-Custer_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/41A%4010x-350x290.png
+42,John Hunter Nemechek,Legacy Motor Club,Toyota,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/JHN_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/42A%4010x-350x290.png
+43,Erik Jones,Legacy Motor Club,Toyota,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/Erik-Jones_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/43A%4010x-350x290.png
+45,Tyler Reddick,23XI Racing,Toyota,https://www.nascar.com/wp-content/uploads/sites/7/2026/02/06/Tyler-Reddick-1.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/45A%4010x-350x290.png
+47,Ricky Stenhouse Jr,Hyak Motorsports,Chevrolet,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/Ricky-Stenhouse-Jr_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/47A%4010x-350x290.png
+48,Justin Allgaier,Hendrick Motorsports,Chevrolet,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/Alex-Bowman_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/48A%4010x-350x290.png
+51,Cody Ware,Rick Ware Racing,Chevrolet,https://www.nascar.com/wp-content/uploads/sites/7/2025/01/28/Cody-Ware-1.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/51A%4010x-350x290.png
+54,Ty Gibbs,Joe Gibbs Racing,Toyota,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/Ty-Gibbs_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/54A%4010x-350x290.png
+60,Ryan Preece,RFK Racing,Ford,https://www.nascar.com/wp-content/uploads/sites/7/2025/01/28/Ryan-Preece-1.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/60A%4010x-350x290.png
+71,Michael McDowell,Spire Motorsports,Chevrolet,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/Michael-McDowell_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/71A%4010x-350x290.png
+77,Carson Hocevar,Spire Motorsports,Chevrolet,https://www.nascar.com/wp-content/uploads/sites/7/2026/02/06/Carson-Hocevar-1.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/77A%4010x-350x290.png
+88,Connor Zilisch,Trackhouse Racing,Chevrolet,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/Connor-Zilisch_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/88A%4010x-350x290.png
+97,Shane van Gisbergen,Trackhouse Racing,Chevrolet,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/SVG_resized.png,https://www.nascar.com/wp-content/uploads/sites/7/2026/01/26/97A%4010x-350x290.png
