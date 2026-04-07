@@ -161,36 +161,51 @@ build_driver_card <- function(car_number, driver, team, manufacturer,
   border_color <- if (highlight) "#FFD700" else if (used) "#555" else "#333"
   opacity <- if (used) "0.5" else "1"
 
-  headshot_html <- if (nchar(hs) > 0) {
-    sprintf('<img src="%s" alt="%s" style="width:80px;height:80px;object-fit:cover;border-radius:50%%;border:2px solid %s;">', hs, driver, border_color)
+  # Full-bleed driver photo as card background
+  bg_style <- if (nchar(hs) > 0) {
+    sprintf("background-image:url('%s');background-size:cover;background-position:top center;", hs)
   } else {
-    sprintf('<div style="width:80px;height:80px;border-radius:50%%;background:#333;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:bold;color:#fff;border:2px solid %s;">#%s</div>', border_color, car_number)
+    "background:#1a1a2e;"
   }
 
+  # Car number badge (top-left) — use image if available, else styled text
   number_html <- if (nchar(ns) > 0) {
-    sprintf('<img src="%s" alt="#%s" style="height:30px;">', ns, car_number)
+    sprintf('<img src="%s" alt="#%s" style="height:35px;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.8));" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'block\'"><span style="display:none;font-family:Orbitron,sans-serif;font-size:18px;font-weight:bold;color:#FFD700;text-shadow:0 1px 4px rgba(0,0,0,0.9);">#%s</span>', ns, car_number, car_number)
   } else {
-    sprintf('<span style="font-family:Orbitron,sans-serif;font-size:20px;font-weight:bold;color:#FFD700;">#%s</span>', car_number)
+    sprintf('<span style="font-family:Orbitron,sans-serif;font-size:18px;font-weight:bold;color:#FFD700;text-shadow:0 1px 4px rgba(0,0,0,0.9);">#%s</span>', car_number)
   }
 
+  # Manufacturer logo (top-right)
   mfr_html <- if (!is.null(ms) && !is.na(ms) && nchar(ms) > 0) {
-    sprintf('<img src="%s" alt="%s" style="height:20px;margin-left:6px;">', ms, manufacturer)
+    sprintf('<img src="%s" alt="%s" style="height:22px;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));">', ms, manufacturer)
+  } else ""
+
+  # Fallback for no headshot — show big number
+  no_photo_html <- if (nchar(hs) == 0) {
+    sprintf('<div style="display:flex;align-items:center;justify-content:center;height:100%%;font-family:Orbitron,sans-serif;font-size:48px;font-weight:bold;color:#FFD700;text-shadow:0 2px 8px rgba(0,0,0,0.5);">#%s</div>', car_number)
   } else ""
 
   sprintf(
-    '<div style="display:inline-block;width:150px;margin:6px;padding:10px;background:#1e1e2e;border:2px solid %s;border-radius:10px;text-align:center;opacity:%s;vertical-align:top;">
-      %s
-      <div style="margin-top:6px;">%s</div>
-      <div style="font-family:Rajdhani,sans-serif;font-size:13px;color:#ccc;margin-top:4px;">%s</div>
-      <div style="font-size:11px;color:#888;margin-top:2px;">%s%s</div>
+    '<div style="display:inline-block;width:155px;margin:6px;border:2px solid %s;border-radius:10px;overflow:hidden;opacity:%s;vertical-align:top;box-shadow:0 4px 12px rgba(0,0,0,0.5);">
+      <div style="position:relative;width:100%%;height:190px;%s">
+        %s
+        <div style="position:absolute;top:6px;left:6px;">%s</div>
+        <div style="position:absolute;top:6px;right:6px;">%s</div>
+        <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent, rgba(0,0,0,0.85));padding:8px 8px 6px;">
+          <div style="font-family:Rajdhani,sans-serif;font-size:14px;font-weight:700;color:#fff;line-height:1.2;">%s</div>
+          <div style="font-size:11px;color:#bbb;">%s</div>
+        </div>
+      </div>
       %s
     </div>',
     border_color, opacity,
-    headshot_html,
+    bg_style,
+    no_photo_html,
     number_html,
+    mfr_html,
     driver,
-    team, mfr_html,
-    if (nchar(extra_info) > 0) sprintf('<div style="margin-top:4px;font-size:12px;color:#FFD700;">%s</div>', extra_info) else ""
+    team,
+    if (nchar(extra_info) > 0) sprintf('<div style="background:#12121f;padding:5px 8px;font-size:12px;color:#FFD700;text-align:center;font-family:Rajdhani,sans-serif;font-weight:600;">%s</div>', extra_info) else ""
   )
 }
 
