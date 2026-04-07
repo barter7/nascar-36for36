@@ -268,6 +268,7 @@ ui <- page_navbar(
   nav_panel("Standings",
     layout_sidebar(fillable = FALSE, sidebar = NULL,
       card(card_header("Overall Standings"), tableOutput("standings_table")),
+      card(card_header("Points by Stage"), tableOutput("stage_table")),
       layout_columns(col_widths = c(3, 3, 3, 3),
         uiOutput("leader_card"),
         uiOutput("most_points_week_card"),
@@ -275,16 +276,17 @@ ui <- page_navbar(
         uiOutput("races_completed_card")
       ),
       card(card_header("Stage Winners"),
-        layout_columns(col_widths = c(2, 2, 2, 2, 2, 2),
+        layout_columns(col_widths = c(4, 4, 4),
           uiOutput("stage1_card"),
           uiOutput("stage2_card"),
-          uiOutput("stage3_card"),
+          uiOutput("stage3_card")
+        ),
+        layout_columns(col_widths = c(4, 4, 4),
           uiOutput("stage4_card"),
           uiOutput("stage5_card"),
           uiOutput("stage6_card")
         )
       ),
-      card(card_header("Points by Stage"), tableOutput("stage_table")),
       card(card_header("Cumulative Points"), plotOutput("cumulative_chart", height = "400px"))
     )
   ),
