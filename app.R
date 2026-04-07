@@ -254,9 +254,9 @@ ui <- page_navbar(
       .card-header { font-family: Orbitron, sans-serif; font-size: 0.95em;
                      letter-spacing: 1px; color: #FFD700; background: #1a1a2e;
                      border-bottom: 1px solid #333; }
-      .stat-card { text-align: center; padding: 20px; }
-      .stat-card .stat-value { font-family: Orbitron, sans-serif; font-size: 2.2em; font-weight: bold; }
-      .stat-card .stat-label { font-size: 0.9em; color: #888; }
+      .stat-card { text-align: center; padding: 10px 8px; }
+      .stat-card .stat-value { font-family: Orbitron, sans-serif; font-size: 1.4em; font-weight: bold; }
+      .stat-card .stat-label { font-size: 0.8em; color: #888; }
       .table { color: #e0e0e0; }
       .table thead th { color: #FFD700; font-family: Orbitron, sans-serif; font-size: 0.8em; }
       .sidebar { background: #12121f; border-right: 1px solid #333; }
@@ -267,13 +267,13 @@ ui <- page_navbar(
   # ---- Standings Tab ----
   nav_panel("Standings",
     layout_sidebar(fillable = FALSE, sidebar = NULL,
+      card(card_header("Overall Standings"), tableOutput("standings_table")),
       layout_columns(col_widths = c(3, 3, 3, 3),
         uiOutput("leader_card"),
         uiOutput("most_points_week_card"),
         uiOutput("best_value_card"),
         uiOutput("races_completed_card")
       ),
-      card(card_header("Overall Standings"), tableOutput("standings_table")),
       card(card_header("Cumulative Points"), plotOutput("cumulative_chart", height = "400px"))
     )
   ),
@@ -444,11 +444,41 @@ server <- function(input, output, session) {
 
   # ---- Cumulative chart ----
   output$cumulative_chart <- renderPlot({
-    st <- standings()
-    if (is.null(st) || nrow(st) == 0) return(NULL)
-    st <- st %>% filter(!is.na(track_short), !is.na(cumulative_points))
-    if (nrow(st) == 0) return(NULL)
-    race_labels <- st %>% distinct(race_number, track_short) %>% arrange(race_number)
+    sc <- scores()
+    sched <- schedule()
+    if (nrow(sc) == 0) return(NULL)
+
+    # Build cumulative points per participant, filling gaps for missing races
+    all_races <- sort(unique(sc$race_number))
+    all_participants <- unique(sc$participant)
+
+    # Get points per participant per race
+    race_pts <- sc %>%
+      group_by(participant, race_number) %>%
+      summarise(points = sum(points, na.rm = TRUE), .groups = "drop")
+
+    # Expand grid so every participant has every race (0 pts for missed races)
+    full_grid <- expand.grid(
+      participant = all_participants,
+      race_number = all_races,
+      stringsAsFactors = FALSE
+    ) %>% as_tibble()
+
+    st <- full_grid %>%
+      left_join(race_pts, by = c("participant", "race_number")) %>%
+      mutate(points = ifelse(is.na(points), 0, points)) %>%
+      arrange(participant, race_number) %>%
+      group_by(participant) %>%
+      mutate(cumulative_points = cumsum(points)) %>%
+      ungroup() %>%
+      left_join(sched %>% select(race_num, track_short),
+                by = c("race_number" = "race_num"))
+
+    race_labels <- st %>% distinct(race_number, track_short) %>%
+      filter(!is.na(track_short)) %>% arrange(race_number)
+
+    if (nrow(race_labels) == 0) return(NULL)
+
     ggplot(st, aes(x = race_number, y = cumulative_points,
                    color = participant, group = participant)) +
       geom_line(linewidth = 1.2) + geom_point(size = 2.5) +
@@ -542,12 +572,38 @@ server <- function(input, output, session) {
   }, striped = TRUE, hover = TRUE, bordered = TRUE, align = "c")
 
   # ---- Rankings ----
+  # Helper to build full cumulative standings with gaps filled
+  full_standings <- reactive({
+    sc <- scores(); sched <- schedule()
+    if (nrow(sc) == 0) return(tibble())
+    all_races <- sort(unique(sc$race_number))
+    all_participants <- unique(sc$participant)
+    race_pts <- sc %>%
+      group_by(participant, race_number) %>%
+      summarise(points = sum(points, na.rm = TRUE), .groups = "drop")
+    full_grid <- expand.grid(
+      participant = all_participants, race_number = all_races,
+      stringsAsFactors = FALSE
+    ) %>% as_tibble()
+    full_grid %>%
+      left_join(race_pts, by = c("participant", "race_number")) %>%
+      mutate(points = ifelse(is.na(points), 0, points)) %>%
+      arrange(participant, race_number) %>%
+      group_by(participant) %>%
+      mutate(cumulative_points = cumsum(points)) %>%
+      ungroup() %>%
+      left_join(sched %>% select(race_num, track_short),
+                by = c("race_number" = "race_num"))
+  })
+
   output$rankings_chart <- renderPlot({
-    st <- standings()
+    st <- full_standings()
     if (nrow(st) == 0) return(NULL)
     ranked <- st %>% group_by(race_number) %>%
       mutate(position = rank(-cumulative_points, ties.method = "min")) %>% ungroup()
-    race_labels <- ranked %>% distinct(race_number, track_short) %>% arrange(race_number)
+    race_labels <- ranked %>% distinct(race_number, track_short) %>%
+      filter(!is.na(track_short)) %>% arrange(race_number)
+    if (nrow(race_labels) == 0) return(NULL)
     ggplot(ranked, aes(x = race_number, y = position, color = participant, group = participant)) +
       geom_line(linewidth = 1.2) + geom_point(size = 3) +
       scale_y_reverse(breaks = 1:4, labels = c("1st", "2nd", "3rd", "4th")) +
