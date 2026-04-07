@@ -3,8 +3,8 @@ name: Update Race Results
 on:
   workflow_dispatch:
   schedule:
-    # Run every Tuesday at 10am ET (14:00 UTC) — after Monday data refresh
-    - cron: "0 14 * * 2"
+    # Run every Monday at 8am ET (12:00 UTC)
+    - cron: "0 12 * * 1"
 
 jobs:
   update:
