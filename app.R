@@ -446,14 +446,14 @@ server <- function(input, output, session) {
       summarise(
         `Total Points` = sum(points, na.rm = TRUE),
         Races = n_distinct(race_number),
-        `Avg Pts` = round(mean(points, na.rm = TRUE), 1),
+        `Avg Pts` = round(mean(points, na.rm = TRUE)),
         Best = max(points, na.rm = TRUE),
         Worst = min(points, na.rm = TRUE)
       ) %>%
       arrange(desc(`Total Points`)) %>%
       mutate(Rank = row_number(), Gap = max(`Total Points`) - `Total Points`) %>%
       select(Rank, Participant = participant, `Total Points`, Gap, Races, `Avg Pts`, Best, Worst)
-  }, striped = TRUE, hover = TRUE, bordered = TRUE, align = "c")
+  }, striped = TRUE, hover = TRUE, bordered = TRUE, align = "c", digits = 0)
 
   # ---- Stage definitions ----
   STAGES <- list(
@@ -484,7 +484,7 @@ server <- function(input, output, session) {
       arrange(desc(Total)) %>%
       rename(Participant = participant)
     tbl
-  }, striped = TRUE, hover = TRUE, bordered = TRUE, align = "c")
+  }, striped = TRUE, hover = TRUE, bordered = TRUE, align = "c", digits = 0)
 
   # ---- Stage winner/leader cards ----
   build_stage_card <- function(stage_num) {
