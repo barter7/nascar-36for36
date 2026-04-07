@@ -25,13 +25,14 @@ for (i in seq_len(nrow(drivers))) {
   }
 }
 
-# --- Car number images ---
+# --- Car number badges (from cf.nascar.com) ---
 for (i in seq_len(nrow(drivers))) {
   d <- drivers[i, ]
   dest <- sprintf("www/img/numbers/%s.png", d$car_number)
-  if (!file.exists(dest) && !is.na(d$number_url) && nchar(d$number_url) > 0) {
-    message(sprintf("Downloading number image for #%s ...", d$car_number))
-    tryCatch(download.file(d$number_url, dest, mode = "wb", quiet = TRUE),
+  if (!file.exists(dest)) {
+    badge_url <- sprintf("https://cf.nascar.com/data/images/carbadges/1/%s.png", d$car_number)
+    message(sprintf("Downloading number badge for #%s ...", d$car_number))
+    tryCatch(download.file(badge_url, dest, mode = "wb", quiet = TRUE),
              error = function(e) message("  FAILED: ", e$message))
     Sys.sleep(0.5)
   }
@@ -40,8 +41,8 @@ for (i in seq_len(nrow(drivers))) {
 # --- Manufacturer logos ---
 mfr_logos <- list(
   Toyota    = "https://www.nascar.com/wp-content/uploads/sites/7/2020/04/06/Toyota-180x180.png",
-  Chevrolet = "https://www.nascar.com/wp-content/uploads/sites/7/2020/04/06/Chevrolet-180x180.png",
-  Ford      = "https://www.nascar.com/wp-content/uploads/sites/7/2020/04/06/Ford-180x180.png"
+  Chevrolet = "https://www.nascar.com/wp-content/uploads/sites/7/2025/03/04/Chevrolet_2025-330x140.png",
+  Ford      = "https://www.nascar.com/wp-content/uploads/sites/7/2026/02/18/Ford-Racing-Logo-300-100.png"
 )
 
 for (mfr in names(mfr_logos)) {

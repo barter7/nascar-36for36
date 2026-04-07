@@ -28,9 +28,14 @@ PICKS_SHEET_ID <- NULL
 # Manufacturer logo URLs (used as fallback if local cache missing)
 MFR_LOGOS <- list(
   Toyota    = "https://www.nascar.com/wp-content/uploads/sites/7/2020/04/06/Toyota-180x180.png",
-  Chevrolet = "https://www.nascar.com/wp-content/uploads/sites/7/2020/04/06/Chevrolet-180x180.png",
-  Ford      = "https://www.nascar.com/wp-content/uploads/sites/7/2020/04/06/Ford-180x180.png"
+  Chevrolet = "https://www.nascar.com/wp-content/uploads/sites/7/2025/03/04/Chevrolet_2025-330x140.png",
+  Ford      = "https://www.nascar.com/wp-content/uploads/sites/7/2026/02/18/Ford-Racing-Logo-300-100.png"
 )
+
+# Car number badge URL pattern (consistent for all cars)
+car_badge_url <- function(car_number) {
+  paste0("https://cf.nascar.com/data/images/carbadges/1/", car_number, ".png")
+}
 
 # ---- Image helpers ----
 # Prefer local cached image; fall back to remote URL
@@ -39,9 +44,9 @@ headshot_src <- function(car_number, headshot_url) {
   if (file.exists(file.path("www", local))) local else headshot_url
 }
 
-number_src <- function(car_number, number_url) {
+number_src <- function(car_number, number_url = NA) {
   local <- paste0("img/numbers/", car_number, ".png")
-  if (file.exists(file.path("www", local))) local else number_url
+  if (file.exists(file.path("www", local))) local else car_badge_url(car_number)
 }
 
 mfr_src <- function(manufacturer) {
@@ -153,9 +158,7 @@ build_driver_card <- function(car_number, driver, team, manufacturer,
   hs <- if (!is.na(headshot_url) && nchar(headshot_url) > 0) {
     headshot_src(car_number, headshot_url)
   } else ""
-  ns <- if (!is.na(number_url) && nchar(number_url) > 0) {
-    number_src(car_number, number_url)
-  } else ""
+  ns <- number_src(car_number)
   ms <- mfr_src(manufacturer)
 
   border_color <- if (highlight) "#FFD700" else if (used) "#555" else "#333"
