@@ -6,12 +6,13 @@ on:
     branches: [main]
     paths:
       - "app.R"
+      - "cache_images.R"
       - "update_results.R"
       - "data/**"
 
 concurrency:
   group: nascar-deploy
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   deploy:
@@ -62,6 +63,7 @@ jobs:
         shell: Rscript {0}
 
       - name: Cache driver images
+        continue-on-error: true
         run: Rscript cache_images.R
 
       - name: Deploy to shinyapps.io
