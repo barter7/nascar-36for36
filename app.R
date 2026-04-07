@@ -532,60 +532,47 @@ server <- function(input, output, session) {
 
   # ---- Cumulative chart ----
   output$cumulative_chart <- renderPlot({
-    tryCatch({
-      sc <- scores()
-      sched <- schedule()
-      if (nrow(sc) == 0) return(NULL)
+    sc <- scores()
+    sched <- schedule()
+    if (nrow(sc) == 0) return(NULL)
 
-      all_races <- sort(unique(sc$race_number))
-      all_participants <- unique(sc$participant)
+    race_pts <- sc %>%
+      group_by(participant, race_number) %>%
+      summarise(points = sum(points, na.rm = TRUE), .groups = "drop") %>%
+      arrange(participant, race_number) %>%
+      group_by(participant) %>%
+      mutate(cumulative_points = cumsum(points)) %>%
+      ungroup()
 
-      race_pts <- sc %>%
-        group_by(participant, race_number) %>%
-        summarise(points = sum(points, na.rm = TRUE), .groups = "drop")
+    race_lookup <- sched %>% select(race_num, track_short) %>%
+      mutate(race_num = as.integer(race_num))
+    race_pts <- race_pts %>%
+      mutate(race_number = as.integer(race_number)) %>%
+      left_join(race_lookup, by = c("race_number" = "race_num"))
 
-      full_grid <- expand.grid(
-        participant = all_participants,
-        race_number = all_races,
-        stringsAsFactors = FALSE
-      ) %>% as_tibble()
+    labels_df <- race_pts %>% distinct(race_number, track_short) %>%
+      filter(!is.na(track_short)) %>% arrange(race_number)
 
-      st <- full_grid %>%
-        left_join(race_pts, by = c("participant", "race_number")) %>%
-        mutate(points = ifelse(is.na(points), 0, points)) %>%
-        arrange(participant, race_number) %>%
-        group_by(participant) %>%
-        mutate(cumulative_points = cumsum(points)) %>%
-        ungroup() %>%
-        left_join(sched %>% select(race_num, track_short),
-                  by = c("race_number" = "race_num"))
+    if (nrow(labels_df) == 0 || nrow(race_pts) == 0) return(NULL)
 
-      race_labels <- st %>% distinct(race_number, track_short) %>%
-        filter(!is.na(track_short)) %>% arrange(race_number)
-
-      if (nrow(race_labels) == 0) return(NULL)
-
-      ggplot(st, aes(x = race_number, y = cumulative_points,
-                     color = participant, group = participant)) +
-        geom_line(linewidth = 1.2) + geom_point(size = 2.5) +
-        scale_color_manual(values = PARTICIPANT_COLORS) +
-        scale_x_continuous(breaks = race_labels$race_number, labels = race_labels$track_short) +
-        labs(x = NULL, y = "Cumulative Points", color = NULL) +
-        theme_minimal(base_size = 14) +
-        theme(
-          plot.background = element_rect(fill = "#161625", color = NA),
-          panel.background = element_rect(fill = "#161625", color = NA),
-          text = element_text(color = "#e0e0e0"),
-          axis.text = element_text(color = "#aaa"),
-          axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
-          legend.position = "top",
-          panel.grid.minor = element_blank(),
-          panel.grid.major = element_line(color = "#2a2a3a")
-        )
-    }, error = function(e) {
-      plot.new()
-      text(0.5, 0.5, paste("Chart error:", e$message), col = "red", cex = 1.2)
-    })
+    ggplot(race_pts, aes(x = race_number, y = cumulative_points,
+                         color = participant, group = participant)) +
+      geom_line(linewidth = 1.2) + geom_point(size = 2.5) +
+      scale_color_manual(values = PARTICIPANT_COLORS) +
+      scale_x_continuous(breaks = labels_df$race_number,
+                         labels = labels_df$track_short) +
+      labs(x = NULL, y = "Cumulative Points", color = NULL) +
+      theme_minimal(base_size = 14) +
+      theme(
+        plot.background = element_rect(fill = "#161625", color = NA),
+        panel.background = element_rect(fill = "#161625", color = NA),
+        text = element_text(color = "#e0e0e0"),
+        axis.text = element_text(color = "#aaa"),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        legend.position = "top",
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_line(color = "#2a2a3a")
+      )
   })
 
   # ---- Weekly results with driver cards ----
