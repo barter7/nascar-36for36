@@ -269,11 +269,11 @@ ui <- page_navbar(
     layout_sidebar(fillable = FALSE, sidebar = NULL,
       card(card_header("Overall Standings"), tableOutput("standings_table")),
       card(card_header("Points by Stage"), tableOutput("stage_table")),
-      layout_columns(col_widths = c(3, 3, 3, 3),
-        uiOutput("leader_card"),
-        uiOutput("most_points_week_card"),
-        uiOutput("best_value_card"),
-        uiOutput("races_completed_card")
+      div(style = "display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;",
+        div(style = "flex:1;min-width:0;", uiOutput("leader_card")),
+        div(style = "flex:1;min-width:0;", uiOutput("most_points_week_card")),
+        div(style = "flex:1;min-width:0;", uiOutput("best_value_card")),
+        div(style = "flex:1;min-width:0;", uiOutput("races_completed_card"))
       ),
       card(card_header("Stage Winners"),
         layout_columns(col_widths = c(4, 4, 4),
