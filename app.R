@@ -730,11 +730,15 @@ server <- function(input, output, session) {
 
     cards <- lapply(seq_len(nrow(drv)), function(i) {
       r <- drv[i, ]
-      # Build pick badges
+      # Build 4 pick badges — always show all 4 circles, filled when picked
       pickers <- pick_map %>% filter(car_number == r$car_number) %>% pull(participant)
-      badge_html <- paste(sapply(pickers, function(p) {
-        sprintf('<span style="display:inline-block;width:24px;height:24px;border-radius:50%%;background:%s;color:#fff;font-size:10px;font-weight:bold;font-family:Orbitron,sans-serif;line-height:24px;text-align:center;margin:0 2px;">%s</span>',
-                PARTICIPANT_COLORS[p], PARTICIPANT_INITIALS[p])
+      badge_html <- paste(sapply(PARTICIPANTS, function(p) {
+        if (p %in% pickers) {
+          sprintf('<span style="display:inline-block;width:24px;height:24px;border-radius:50%%;background:%s;color:#fff;font-size:10px;font-weight:bold;font-family:Orbitron,sans-serif;line-height:24px;text-align:center;margin:0 2px;box-shadow:0 1px 3px rgba(0,0,0,0.5);">%s</span>',
+                  PARTICIPANT_COLORS[p], PARTICIPANT_INITIALS[p])
+        } else {
+          '<span style="display:inline-block;width:24px;height:24px;border-radius:50%;background:#2a2a3a;border:1px solid #444;margin:0 2px;"></span>'
+        }
       }), collapse = "")
 
       info <- if (r$races > 0) {
