@@ -1,6 +1,7 @@
 ############################################################################
-# NASCAR 36 for 36 — 2026 Season Tracker
+# NASCAR 36 for 36 - 2026 Season Tracker
 # Shiny App for tracking a 4-person pick'em league
+# Dark racing theme with driver headshots, car numbers, manufacturer logos
 ############################################################################
 
 library(shiny)
@@ -22,8 +23,31 @@ PARTICIPANT_COLORS <- c(
 )
 
 # Google Sheet ID for picks (public, no auth needed)
-# Set to NULL to use local CSV only
 PICKS_SHEET_ID <- NULL
+
+# Manufacturer logo URLs (used as fallback if local cache missing)
+MFR_LOGOS <- list(
+  Toyota    = "https://www.nascar.com/wp-content/uploads/sites/7/2020/04/06/Toyota-180x180.png",
+  Chevrolet = "https://www.nascar.com/wp-content/uploads/sites/7/2020/04/06/Chevrolet-180x180.png",
+  Ford      = "https://www.nascar.com/wp-content/uploads/sites/7/2020/04/06/Ford-180x180.png"
+)
+
+# ---- Image helpers ----
+# Prefer local cached image; fall back to remote URL
+headshot_src <- function(car_number, headshot_url) {
+  local <- paste0("img/headshots/", car_number, ".png")
+  if (file.exists(file.path("www", local))) local else headshot_url
+}
+
+number_src <- function(car_number, number_url) {
+  local <- paste0("img/numbers/", car_number, ".png")
+  if (file.exists(file.path("www", local))) local else number_url
+}
+
+mfr_src <- function(manufacturer) {
+  local <- paste0("img/manufacturers/", tolower(manufacturer), ".png")
+  if (file.exists(file.path("www", local))) local else MFR_LOGOS[[manufacturer]]
+}
 
 # ---- Load data ----
 load_schedule <- function() {
@@ -49,33 +73,20 @@ load_results <- function() {
 
 load_picks <- function() {
   picks <- NULL
-
-  # Try Google Sheet first
   if (!is.null(PICKS_SHEET_ID)) {
     tryCatch({
       gs4_deauth()
       picks <- read_sheet(PICKS_SHEET_ID, sheet = 1) %>% as.data.frame()
-    }, error = function(e) {
-      message("Could not read Google Sheet: ", e$message)
-    })
+    }, error = function(e) message("Could not read Google Sheet: ", e$message))
   }
-
-  # Fall back to local CSV
-  if (is.null(picks)) {
-    picks <- read_csv("data/picks.csv", show_col_types = FALSE)
-  }
-
+  if (is.null(picks)) picks <- read_csv("data/picks.csv", show_col_types = FALSE)
   picks
 }
 
 # ---- Transform picks from wide to long ----
 picks_to_long <- function(picks_wide) {
   picks_wide %>%
-    pivot_longer(
-      cols = starts_with("race_"),
-      names_to = "race_num",
-      values_to = "car_number"
-    ) %>%
+    pivot_longer(cols = starts_with("race_"), names_to = "race_num", values_to = "car_number") %>%
     mutate(
       race_number = as.integer(str_extract(race_num, "\\d+")),
       car_number  = as.integer(car_number)
@@ -93,7 +104,6 @@ compute_scores <- function(picks_long, results) {
       finish_pos = integer(), points = numeric()
     ))
   }
-
   picks_long %>%
     inner_join(
       results %>% select(race_number, car_number, driver, finish_pos, points),
@@ -104,11 +114,9 @@ compute_scores <- function(picks_long, results) {
 # ---- Cumulative standings ----
 compute_standings <- function(scores, schedule) {
   if (nrow(scores) == 0) return(tibble())
-
   race_points <- scores %>%
     group_by(participant, race_number) %>%
     summarise(points = sum(points, na.rm = TRUE), .groups = "drop")
-
   race_points %>%
     arrange(participant, race_number) %>%
     group_by(participant) %>%
@@ -121,11 +129,9 @@ compute_standings <- function(scores, schedule) {
 # ---- Value over driver's season average ----
 compute_value <- function(scores, results) {
   if (nrow(scores) == 0 || nrow(results) == 0) return(tibble())
-
   driver_avg <- results %>%
     group_by(car_number, driver) %>%
     summarise(avg_points = mean(points, na.rm = TRUE), .groups = "drop")
-
   scores %>%
     left_join(driver_avg, by = c("car_number", "driver")) %>%
     mutate(value = points - avg_points)
@@ -134,31 +140,100 @@ compute_value <- function(scores, results) {
 # ---- Weekly rankings ----
 compute_weekly_ranks <- function(scores) {
   if (nrow(scores) == 0) return(tibble())
-
   scores %>%
     group_by(race_number) %>%
     mutate(weekly_rank = rank(-points, ties.method = "min")) %>%
     ungroup()
 }
 
+# ---- Build driver card HTML ----
+build_driver_card <- function(car_number, driver, team, manufacturer,
+                               headshot_url = NA, number_url = NA,
+                               highlight = FALSE, used = FALSE, extra_info = "") {
+  hs <- if (!is.na(headshot_url) && nchar(headshot_url) > 0) {
+    headshot_src(car_number, headshot_url)
+  } else ""
+  ns <- if (!is.na(number_url) && nchar(number_url) > 0) {
+    number_src(car_number, number_url)
+  } else ""
+  ms <- mfr_src(manufacturer)
+
+  border_color <- if (highlight) "#FFD700" else if (used) "#555" else "#333"
+  opacity <- if (used) "0.5" else "1"
+
+  headshot_html <- if (nchar(hs) > 0) {
+    sprintf('<img src="%s" alt="%s" style="width:80px;height:80px;object-fit:cover;border-radius:50%%;border:2px solid %s;">', hs, driver, border_color)
+  } else {
+    sprintf('<div style="width:80px;height:80px;border-radius:50%%;background:#333;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:bold;color:#fff;border:2px solid %s;">#%s</div>', border_color, car_number)
+  }
+
+  number_html <- if (nchar(ns) > 0) {
+    sprintf('<img src="%s" alt="#%s" style="height:30px;">', ns, car_number)
+  } else {
+    sprintf('<span style="font-family:Orbitron,sans-serif;font-size:20px;font-weight:bold;color:#FFD700;">#%s</span>', car_number)
+  }
+
+  mfr_html <- if (!is.null(ms) && !is.na(ms) && nchar(ms) > 0) {
+    sprintf('<img src="%s" alt="%s" style="height:20px;margin-left:6px;">', ms, manufacturer)
+  } else ""
+
+  sprintf(
+    '<div style="display:inline-block;width:150px;margin:6px;padding:10px;background:#1e1e2e;border:2px solid %s;border-radius:10px;text-align:center;opacity:%s;vertical-align:top;">
+      %s
+      <div style="margin-top:6px;">%s</div>
+      <div style="font-family:Rajdhani,sans-serif;font-size:13px;color:#ccc;margin-top:4px;">%s</div>
+      <div style="font-size:11px;color:#888;margin-top:2px;">%s%s</div>
+      %s
+    </div>',
+    border_color, opacity,
+    headshot_html,
+    number_html,
+    driver,
+    team, mfr_html,
+    if (nchar(extra_info) > 0) sprintf('<div style="margin-top:4px;font-size:12px;color:#FFD700;">%s</div>', extra_info) else ""
+  )
+}
+
 # ===========================================================================
 # UI
 # ===========================================================================
 ui <- page_navbar(
-  title = "NASCAR 36 for 36 — 2026",
+  title = tags$span(
+    style = "font-family:Orbitron,sans-serif;font-weight:700;letter-spacing:2px;",
+    "NASCAR 36 for 36 ", tags$span(style = "font-size:0.7em;color:#FFD700;", "2026")
+  ),
   theme = bs_theme(
     version = 5,
-    bootswatch = "flatly",
-    primary = "#1a1a2e",
-    "navbar-bg" = "#1a1a2e"
+    bg = "#0d0d1a",
+    fg = "#e0e0e0",
+    primary = "#FFD700",
+    secondary = "#333",
+    "navbar-bg" = "#0d0d1a",
+    "card-bg" = "#161625",
+    "card-border-color" = "#333"
   ),
-  header = tags$head(tags$style(HTML("
-    body { background-color: #f8f9fa; }
-    .card { border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    .stat-card { text-align: center; padding: 20px; }
-    .stat-card .stat-value { font-size: 2.5em; font-weight: bold; }
-    .stat-card .stat-label { font-size: 0.9em; color: #666; }
-  "))),
+  header = tags$head(
+    tags$link(
+      rel = "stylesheet",
+      href = "https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@400;600;700&display=swap"
+    ),
+    tags$style(HTML("
+      body { background-color: #0d0d1a; font-family: Rajdhani, sans-serif; }
+      .navbar { border-bottom: 2px solid #FFD700; }
+      .nav-link { font-family: Orbitron, sans-serif; font-size: 0.85em; letter-spacing: 1px; }
+      .card { border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.4); }
+      .card-header { font-family: Orbitron, sans-serif; font-size: 0.95em;
+                     letter-spacing: 1px; color: #FFD700; background: #1a1a2e;
+                     border-bottom: 1px solid #333; }
+      .stat-card { text-align: center; padding: 20px; }
+      .stat-card .stat-value { font-family: Orbitron, sans-serif; font-size: 2.2em; font-weight: bold; }
+      .stat-card .stat-label { font-size: 0.9em; color: #888; }
+      .table { color: #e0e0e0; }
+      .table thead th { color: #FFD700; font-family: Orbitron, sans-serif; font-size: 0.8em; }
+      .sidebar { background: #12121f; border-right: 1px solid #333; }
+      .form-select, .form-control { background: #1e1e2e; color: #e0e0e0; border-color: #444; }
+    "))
+  ),
 
   # ---- Standings Tab ----
   nav_panel("Standings",
@@ -181,7 +256,7 @@ ui <- page_navbar(
         selectInput("race_select", "Select Race", choices = NULL, selected = NULL)
       ),
       layout_columns(col_widths = c(6, 6),
-        card(card_header("Picks & Points"), tableOutput("weekly_table")),
+        card(card_header("Picks & Points"), uiOutput("weekly_cards")),
         card(card_header("Weekly Points"), plotOutput("weekly_bar", height = "300px"))
       )
     )
@@ -190,7 +265,7 @@ ui <- page_navbar(
   # ---- Pick History Tab ----
   nav_panel("Pick History",
     layout_sidebar(fillable = FALSE, sidebar = NULL,
-      card(card_header("All Picks — Car # & Points Earned"),
+      card(card_header("All Picks - Car # & Points Earned"),
            div(style = "overflow-x: auto;", tableOutput("picks_grid"))),
       card(card_header("Value Over Average (Points vs Driver Season Avg)"),
            div(style = "overflow-x: auto;", tableOutput("value_grid")))
@@ -215,8 +290,8 @@ ui <- page_navbar(
                     choices = PARTICIPANTS, selected = PARTICIPANTS[1])
       ),
       layout_columns(col_widths = c(6, 6),
-        card(card_header("Drivers Already Used"), tableOutput("used_drivers")),
-        card(card_header("Drivers Still Available"), tableOutput("available_drivers"))
+        card(card_header("Drivers Already Used"), uiOutput("used_drivers_cards")),
+        card(card_header("Drivers Still Available"), uiOutput("available_drivers_cards"))
       )
     )
   )
@@ -249,8 +324,6 @@ server <- function(input, output, session) {
     sort(unique(res$race_number))
   })
 
-  # Update race selector
-
   observe({
     cr <- completed_races()
     sched <- schedule()
@@ -262,7 +335,6 @@ server <- function(input, output, session) {
   })
 
   # ---- Summary cards ----
-
   output$leader_card <- renderUI({
     sc <- scores()
     if (nrow(sc) == 0)
@@ -309,7 +381,6 @@ server <- function(input, output, session) {
   })
 
   # ---- Standings table ----
-
   output$standings_table <- renderTable({
     sc <- scores()
     if (nrow(sc) == 0)
@@ -324,13 +395,11 @@ server <- function(input, output, session) {
         Worst = min(points, na.rm = TRUE)
       ) %>%
       arrange(desc(`Total Points`)) %>%
-      mutate(Rank = row_number(),
-             Gap = max(`Total Points`) - `Total Points`) %>%
+      mutate(Rank = row_number(), Gap = max(`Total Points`) - `Total Points`) %>%
       select(Rank, Participant = participant, `Total Points`, Gap, Races, `Avg Pts`, Best, Worst)
   }, striped = TRUE, hover = TRUE, bordered = TRUE, align = "c")
 
   # ---- Cumulative chart ----
-
   output$cumulative_chart <- renderPlot({
     st <- standings()
     if (nrow(st) == 0) return(NULL)
@@ -341,22 +410,41 @@ server <- function(input, output, session) {
       scale_x_continuous(breaks = unique(st$race_number), labels = unique(st$track_short)) +
       labs(x = NULL, y = "Cumulative Points", color = NULL) +
       theme_minimal(base_size = 14) +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
-            legend.position = "top", panel.grid.minor = element_blank())
+      theme(
+        plot.background = element_rect(fill = "#161625", color = NA),
+        panel.background = element_rect(fill = "#161625", color = NA),
+        text = element_text(color = "#e0e0e0"),
+        axis.text = element_text(color = "#aaa"),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        legend.position = "top",
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_line(color = "#2a2a3a")
+      )
   })
 
-  # ---- Weekly results ----
-
-  output$weekly_table <- renderTable({
+  # ---- Weekly results with driver cards ----
+  output$weekly_cards <- renderUI({
     req(input$race_select)
     rn <- as.integer(input$race_select)
     sc <- scores() %>% filter(race_number == rn)
-    if (nrow(sc) == 0) return(data.frame(Message = "No data for this race"))
-    sc %>% arrange(desc(points)) %>% mutate(Rank = row_number()) %>%
-      left_join(drivers() %>% select(car_number, team), by = "car_number") %>%
-      select(Rank, Participant = participant, `Car #` = car_number,
-             Driver = driver, Team = team, Finish = finish_pos, Points = points)
-  }, striped = TRUE, hover = TRUE, bordered = TRUE, align = "c")
+    drv <- drivers()
+    if (nrow(sc) == 0) return(tags$p(style = "color:#888;", "No data for this race"))
+
+    sc <- sc %>% arrange(desc(points)) %>%
+      left_join(drv %>% select(car_number, team, manufacturer, headshot_url, number_url),
+                by = "car_number")
+
+    cards <- lapply(seq_len(nrow(sc)), function(i) {
+      r <- sc[i, ]
+      info <- paste0("P", r$finish_pos, " | ", r$points, " pts | ", r$participant)
+      HTML(build_driver_card(
+        r$car_number, r$driver, r$team, r$manufacturer,
+        r$headshot_url, r$number_url,
+        highlight = (i == 1), extra_info = info
+      ))
+    })
+    div(style = "display:flex;flex-wrap:wrap;justify-content:center;", cards)
+  })
 
   output$weekly_bar <- renderPlot({
     req(input$race_select)
@@ -365,15 +453,23 @@ server <- function(input, output, session) {
     if (nrow(sc) == 0) return(NULL)
     ggplot(sc, aes(x = reorder(participant, -points), y = points, fill = participant)) +
       geom_col(width = 0.6) +
-      geom_text(aes(label = points), vjust = -0.5, size = 5, fontface = "bold") +
+      geom_text(aes(label = points), vjust = -0.5, size = 5, fontface = "bold", color = "#e0e0e0") +
       scale_fill_manual(values = PARTICIPANT_COLORS) +
       labs(x = NULL, y = "Points") +
-      theme_minimal(base_size = 14) + theme(legend.position = "none") +
+      theme_minimal(base_size = 14) +
+      theme(
+        legend.position = "none",
+        plot.background = element_rect(fill = "#161625", color = NA),
+        panel.background = element_rect(fill = "#161625", color = NA),
+        text = element_text(color = "#e0e0e0"),
+        axis.text = element_text(color = "#aaa"),
+        panel.grid.major = element_line(color = "#2a2a3a"),
+        panel.grid.minor = element_blank()
+      ) +
       coord_cartesian(ylim = c(0, max(sc$points, na.rm = TRUE) * 1.15))
   })
 
   # ---- Pick history grid ----
-
   output$picks_grid <- renderTable({
     sc <- scores(); sched <- schedule()
     if (nrow(sc) == 0) return(data.frame(Message = "No data yet"))
@@ -400,7 +496,6 @@ server <- function(input, output, session) {
   }, striped = TRUE, hover = TRUE, bordered = TRUE, align = "c")
 
   # ---- Rankings ----
-
   output$rankings_chart <- renderPlot({
     st <- standings()
     if (nrow(st) == 0) return(NULL)
@@ -413,8 +508,16 @@ server <- function(input, output, session) {
       scale_x_continuous(breaks = unique(ranked$race_number), labels = unique(ranked$track_short)) +
       labs(x = NULL, y = "Position", color = NULL) +
       theme_minimal(base_size = 14) +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
-            legend.position = "top", panel.grid.minor = element_blank())
+      theme(
+        plot.background = element_rect(fill = "#161625", color = NA),
+        panel.background = element_rect(fill = "#161625", color = NA),
+        text = element_text(color = "#e0e0e0"),
+        axis.text = element_text(color = "#aaa"),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        legend.position = "top",
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_line(color = "#2a2a3a")
+      )
   })
 
   output$rank_grid <- renderTable({
@@ -429,33 +532,54 @@ server <- function(input, output, session) {
     wide %>% left_join(avg, by = "participant") %>% rename(Participant = participant)
   }, striped = TRUE, hover = TRUE, bordered = TRUE, align = "c")
 
-  # ---- Drivers used ----
-
-  output$used_drivers <- renderTable({
+  # ---- Drivers used (with card display) ----
+  output$used_drivers_cards <- renderUI({
     req(input$participant_select)
     pl <- picks_long(); drv <- drivers(); sched <- schedule(); sc <- scores()
-    if (nrow(pl) == 0) return(data.frame(Message = "No picks yet"))
-    pl %>%
+    if (nrow(pl) == 0) return(tags$p(style = "color:#888;", "No picks yet"))
+
+    used <- pl %>%
       filter(participant == input$participant_select) %>%
       left_join(drv, by = "car_number") %>%
       left_join(sched %>% select(race_num, track_short), by = c("race_number" = "race_num")) %>%
       left_join(sc %>% select(participant, race_number, car_number, points),
                 by = c("participant", "race_number", "car_number")) %>%
-      arrange(race_number) %>%
-      select(`Race` = race_number, Track = track_short, `Car #` = car_number,
-             Driver = driver, Team = team, Points = points)
-  }, striped = TRUE, hover = TRUE, bordered = TRUE, align = "c")
+      arrange(race_number)
 
-  output$available_drivers <- renderTable({
+    if (nrow(used) == 0) return(tags$p(style = "color:#888;", "No picks yet"))
+
+    cards <- lapply(seq_len(nrow(used)), function(i) {
+      r <- used[i, ]
+      info <- paste0("R", r$race_number, " ", r$track_short,
+                     if (!is.na(r$points)) paste0(" | ", r$points, " pts") else "")
+      HTML(build_driver_card(
+        r$car_number, r$driver, r$team, r$manufacturer,
+        r$headshot_url, r$number_url,
+        used = TRUE, extra_info = info
+      ))
+    })
+    div(style = "display:flex;flex-wrap:wrap;justify-content:center;", cards)
+  })
+
+  output$available_drivers_cards <- renderUI({
     req(input$participant_select)
     used_cars <- picks_long() %>%
       filter(participant == input$participant_select) %>%
       pull(car_number) %>% unique()
-    available <- drivers() %>% filter(!car_number %in% used_cars) %>%
-      arrange(car_number) %>% select(`Car #` = car_number, Driver = driver, Team = team)
-    if (nrow(available) == 0) return(data.frame(Message = "All drivers used!"))
-    available
-  }, striped = TRUE, hover = TRUE, bordered = TRUE, align = "c")
+    drv <- drivers()
+    available <- drv %>% filter(!car_number %in% used_cars) %>% arrange(car_number)
+
+    if (nrow(available) == 0) return(tags$p(style = "color:#888;", "All drivers used!"))
+
+    cards <- lapply(seq_len(nrow(available)), function(i) {
+      r <- available[i, ]
+      HTML(build_driver_card(
+        r$car_number, r$driver, r$team, r$manufacturer,
+        r$headshot_url, r$number_url
+      ))
+    })
+    div(style = "display:flex;flex-wrap:wrap;justify-content:center;", cards)
+  })
 }
 
 shinyApp(ui, server)
