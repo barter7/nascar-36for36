@@ -78,7 +78,7 @@ jobs:
 
           rsconnect::deployApp(
             appDir         = ".",
-            appName        = "nascar36for36",
+            appName        = "nascar-36for36",
             appFiles       = c(
               "app.R",
               list.files("data", full.names = TRUE),
