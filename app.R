@@ -276,15 +276,15 @@ ui <- page_navbar(
         div(style = "flex:1;min-width:0;", uiOutput("races_completed_card"))
       ),
       card(card_header("Stage Winners"),
-        layout_columns(col_widths = c(4, 4, 4),
-          uiOutput("stage1_card"),
-          uiOutput("stage2_card"),
-          uiOutput("stage3_card")
+        div(style = "display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;margin-bottom:8px;",
+          div(style = "flex:1;min-width:0;", uiOutput("stage1_card")),
+          div(style = "flex:1;min-width:0;", uiOutput("stage2_card")),
+          div(style = "flex:1;min-width:0;", uiOutput("stage3_card"))
         ),
-        layout_columns(col_widths = c(4, 4, 4),
-          uiOutput("stage4_card"),
-          uiOutput("stage5_card"),
-          uiOutput("stage6_card")
+        div(style = "display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;",
+          div(style = "flex:1;min-width:0;", uiOutput("stage4_card")),
+          div(style = "flex:1;min-width:0;", uiOutput("stage5_card")),
+          div(style = "flex:1;min-width:0;", uiOutput("stage6_card"))
         )
       ),
       card(card_header("Cumulative Points"), plotOutput("cumulative_chart", height = "400px"))
