@@ -255,8 +255,8 @@ ui <- page_navbar(
                      letter-spacing: 1px; color: #FFD700; background: #1a1a2e;
                      border-bottom: 1px solid #333; }
       .stat-card { text-align: center; padding: 8px 4px; }
-      .stat-card .stat-value { font-family: Orbitron, sans-serif; font-size: 1.1em; font-weight: bold; white-space: nowrap; }
-      .stat-card .stat-label { font-size: 0.75em; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .stat-card .stat-value { font-family: Orbitron, sans-serif; font-size: 1.1em; font-weight: bold; }
+      .stat-card .stat-label { font-size: 0.75em; color: #888; }
       .table { color: #e0e0e0; }
       .table thead th { color: #FFD700; font-family: Orbitron, sans-serif; font-size: 0.8em; }
       .sidebar { background: #12121f; border-right: 1px solid #333; }
@@ -560,7 +560,7 @@ server <- function(input, output, session) {
 
     ggplot(race_pts, aes(x = race_number, y = cumulative_points,
                          color = participant, group = participant)) +
-      geom_line(linewidth = 1.2) + geom_point(size = 2.5) +
+      geom_line(size = 1.2) + geom_point(size = 2.5) +
       scale_color_manual(values = PARTICIPANT_COLORS) +
       scale_x_continuous(breaks = labels_df$race_number,
                          labels = labels_df$track_short) +
@@ -685,7 +685,7 @@ server <- function(input, output, session) {
       filter(!is.na(track_short)) %>% arrange(race_number)
     if (nrow(race_labels) == 0) return(NULL)
     ggplot(ranked, aes(x = race_number, y = position, color = participant, group = participant)) +
-      geom_line(linewidth = 1.2) + geom_point(size = 3) +
+      geom_line(size = 1.2) + geom_point(size = 3) +
       scale_y_reverse(breaks = 1:4, labels = c("1st", "2nd", "3rd", "4th")) +
       scale_color_manual(values = PARTICIPANT_COLORS) +
       scale_x_continuous(breaks = race_labels$race_number, labels = race_labels$track_short) +
