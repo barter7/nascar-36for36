@@ -433,7 +433,7 @@ server <- function(input, output, session) {
   output$races_completed_card <- renderUI({
     card(class = "stat-card",
       div(class = "stat-value", paste0(length(completed_races()), "/36")),
-      div(class = "stat-label", "Races Completed"))
+      div(class = "stat-label", "Races Run"))
   })
 
   # ---- Standings table ----
@@ -533,7 +533,7 @@ server <- function(input, output, session) {
   output$stage5_card <- build_stage_card(5)
   output$stage6_card <- build_stage_card(6)
 
-  # ---- Cumulative chart ----
+  # ---- Cumulative chart (base R for max compatibility) ----
   output$cumulative_chart <- renderPlot({
     sc <- scores()
     sched <- schedule()
@@ -545,38 +545,36 @@ server <- function(input, output, session) {
       arrange(participant, race_number) %>%
       group_by(participant) %>%
       mutate(cumulative_points = cumsum(points)) %>%
-      ungroup()
+      ungroup() %>%
+      mutate(race_number = as.integer(race_number))
 
-    race_lookup <- sched %>% select(race_num, track_short) %>%
-      mutate(race_num = as.integer(race_num))
-    race_pts <- race_pts %>%
-      mutate(race_number = as.integer(race_number)) %>%
-      left_join(race_lookup, by = c("race_number" = "race_num"))
+    sched_lookup <- sched %>%
+      mutate(race_num = as.integer(race_num)) %>%
+      select(race_num, track_short)
 
-    labels_df <- race_pts %>% distinct(race_number, track_short) %>%
-      filter(!is.na(track_short)) %>% arrange(race_number)
+    all_races <- sort(unique(race_pts$race_number))
+    track_names <- sched_lookup$track_short[match(all_races, sched_lookup$race_num)]
+    y_max <- max(race_pts$cumulative_points, na.rm = TRUE) * 1.1
 
-    if (nrow(labels_df) == 0 || nrow(race_pts) == 0) return(NULL)
+    par(bg = "#161625", fg = "#e0e0e0", col.axis = "#aaa", col.lab = "#e0e0e0",
+        col.main = "#e0e0e0", mar = c(5, 4, 3, 1))
 
-    ggplot(race_pts, aes(x = race_number, y = cumulative_points,
-                         color = participant, group = participant)) +
-      geom_line(size = 1.2) + geom_point(size = 2.5) +
-      scale_color_manual(values = PARTICIPANT_COLORS) +
-      scale_x_continuous(breaks = labels_df$race_number,
-                         labels = labels_df$track_short) +
-      labs(x = NULL, y = "Cumulative Points", color = NULL) +
-      theme_minimal(base_size = 14) +
-      theme(
-        plot.background = element_rect(fill = "#161625", color = NA),
-        panel.background = element_rect(fill = "#161625", color = NA),
-        text = element_text(color = "#e0e0e0"),
-        axis.text = element_text(color = "#aaa"),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
-        legend.position = "top",
-        panel.grid.minor = element_blank(),
-        panel.grid.major = element_line(color = "#2a2a3a")
-      )
-  })
+    plot(NULL, xlim = range(all_races), ylim = c(0, y_max),
+         xlab = "", ylab = "Cumulative Points", xaxt = "n",
+         main = "")
+    axis(1, at = all_races, labels = track_names, las = 2, cex.axis = 0.85)
+    grid(col = "#2a2a3a", lty = 1)
+
+    colors <- PARTICIPANT_COLORS
+    for (p in unique(race_pts$participant)) {
+      d <- race_pts %>% filter(participant == p)
+      lines(d$race_number, d$cumulative_points, col = colors[p], lwd = 2.5)
+      points(d$race_number, d$cumulative_points, col = colors[p], pch = 19, cex = 1.5)
+    }
+
+    legend("topleft", legend = names(colors), col = colors, lwd = 2.5, pch = 19,
+           bg = "#1a1a2e", text.col = "#e0e0e0", border = "#333", cex = 0.9)
+  }, bg = "#161625")
 
   # ---- Weekly results with driver cards ----
   output$weekly_cards <- renderUI({
