@@ -110,7 +110,7 @@ race_number,car_number,driver,finish_pos,points
 5,9,Chase Elliott,2,40
 5,24,William Byron,3,34
 5,20,Christopher Bell,4,51
-5,54,Ty Gibbs,5,31
+5,54,Ty Gibbs,5,39
 5,17,Chris Buescher,6,29
 5,5,Kyle Larson,7,28
 5,19,Chase Briscoe,8,27
@@ -147,7 +147,7 @@ race_number,car_number,driver,finish_pos,points
 7,20,Christopher Bell,7,30
 7,2,Austin Cindric,8,27
 7,5,Kyle Larson,9,30
-7,21,Josh Berry,10,25
+7,21,Josh Berry,10,36
 7,60,Ryan Preece,12,26
 7,45,Tyler Reddick,15,28
 7,77,Carson Hocevar,17,20
