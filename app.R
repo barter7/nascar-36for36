@@ -57,7 +57,7 @@ mfr_src <- function(manufacturer) {
 # ---- Load data ----
 load_schedule <- function() {
   read_csv("data/schedule.csv", show_col_types = FALSE) %>%
-    mutate(date = as.Date(date))
+    mutate(date = as.Date(date), race_num = as.integer(race_num))
 }
 
 load_drivers <- function() {
@@ -190,7 +190,7 @@ build_driver_card <- function(car_number, driver, team, manufacturer,
   } else ""
 
   badge_div <- if (nchar(badge_html) > 0) {
-    sprintf('<div style="position:absolute;top:34px;left:6px;">%s</div>', badge_html)
+    sprintf('<div style="position:absolute;top:-12px;left:50%%;transform:translateX(-50%%);z-index:10;display:flex;gap:2px;">%s</div>', badge_html)
   } else ""
 
   info_div <- if (nchar(extra_info) > 0) {
@@ -198,12 +198,12 @@ build_driver_card <- function(car_number, driver, team, manufacturer,
   } else ""
 
   sprintf(
-    '<div style="display:inline-block;width:155px;margin:6px;border:2px solid %s;border-radius:10px;overflow:hidden;opacity:%s;vertical-align:top;box-shadow:0 4px 12px rgba(0,0,0,0.5);">
-      <div style="position:relative;width:100%%;height:190px;%s">
+    '<div style="display:inline-block;width:155px;margin:14px 6px 6px;position:relative;border:2px solid %s;border-radius:10px;overflow:visible;opacity:%s;vertical-align:top;box-shadow:0 4px 12px rgba(0,0,0,0.5);">
+      %s
+      <div style="position:relative;width:100%%;height:190px;border-radius:8px 8px 0 0;overflow:hidden;%s">
         %s
         <div style="position:absolute;top:6px;left:6px;">%s</div>
         <div style="position:absolute;top:6px;right:6px;">%s</div>
-        %s
         <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent, rgba(0,0,0,0.85));padding:8px 8px 6px;">
           <div style="font-family:Rajdhani,sans-serif;font-size:14px;font-weight:700;color:#fff;line-height:1.2;">%s</div>
           <div style="font-size:11px;color:#bbb;">%s</div>
@@ -212,11 +212,11 @@ build_driver_card <- function(car_number, driver, team, manufacturer,
       %s
     </div>',
     border_color, opacity,
+    badge_div,
     bg_style,
     no_photo_html,
     number_html,
     mfr_html,
-    badge_div,
     driver,
     team,
     info_div
@@ -445,6 +445,8 @@ server <- function(input, output, session) {
   # ---- Cumulative chart ----
   output$cumulative_chart <- renderPlot({
     st <- standings()
+    if (is.null(st) || nrow(st) == 0) return(NULL)
+    st <- st %>% filter(!is.na(track_short), !is.na(cumulative_points))
     if (nrow(st) == 0) return(NULL)
     race_labels <- st %>% distinct(race_number, track_short) %>% arrange(race_number)
     ggplot(st, aes(x = race_number, y = cumulative_points,
