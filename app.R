@@ -154,7 +154,8 @@ compute_weekly_ranks <- function(scores) {
 # ---- Build driver card HTML ----
 build_driver_card <- function(car_number, driver, team, manufacturer,
                                headshot_url = NA, number_url = NA,
-                               highlight = FALSE, used = FALSE, extra_info = "") {
+                               highlight = FALSE, used = FALSE, extra_info = "",
+                               badge_html = "") {
   hs <- if (!is.na(headshot_url) && nchar(headshot_url) > 0) {
     headshot_src(car_number, headshot_url)
   } else ""
@@ -188,12 +189,21 @@ build_driver_card <- function(car_number, driver, team, manufacturer,
     sprintf('<div style="display:flex;align-items:center;justify-content:center;height:100%%;font-family:Orbitron,sans-serif;font-size:48px;font-weight:bold;color:#FFD700;text-shadow:0 2px 8px rgba(0,0,0,0.5);">#%s</div>', car_number)
   } else ""
 
+  badge_div <- if (nchar(badge_html) > 0) {
+    sprintf('<div style="position:absolute;top:34px;left:6px;">%s</div>', badge_html)
+  } else ""
+
+  info_div <- if (nchar(extra_info) > 0) {
+    sprintf('<div style="background:#12121f;padding:5px 8px;font-size:12px;color:#FFD700;text-align:center;font-family:Rajdhani,sans-serif;font-weight:600;">%s</div>', extra_info)
+  } else ""
+
   sprintf(
     '<div style="display:inline-block;width:155px;margin:6px;border:2px solid %s;border-radius:10px;overflow:hidden;opacity:%s;vertical-align:top;box-shadow:0 4px 12px rgba(0,0,0,0.5);">
       <div style="position:relative;width:100%%;height:190px;%s">
         %s
         <div style="position:absolute;top:6px;left:6px;">%s</div>
         <div style="position:absolute;top:6px;right:6px;">%s</div>
+        %s
         <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent, rgba(0,0,0,0.85));padding:8px 8px 6px;">
           <div style="font-family:Rajdhani,sans-serif;font-size:14px;font-weight:700;color:#fff;line-height:1.2;">%s</div>
           <div style="font-size:11px;color:#bbb;">%s</div>
@@ -206,9 +216,10 @@ build_driver_card <- function(car_number, driver, team, manufacturer,
     no_photo_html,
     number_html,
     mfr_html,
+    badge_div,
     driver,
     team,
-    if (nchar(extra_info) > 0) sprintf('<div style="background:#12121f;padding:5px 8px;font-size:12px;color:#FFD700;text-align:center;font-family:Rajdhani,sans-serif;font-weight:600;">%s</div>', extra_info) else ""
+    info_div
   )
 }
 
@@ -302,15 +313,29 @@ ui <- page_navbar(
 
   # ---- Drivers Used Tab ----
   nav_panel("Drivers Used",
-    layout_sidebar(fillable = FALSE,
-      sidebar = sidebar(
-        selectInput("participant_select", "Participant",
-                    choices = PARTICIPANTS, selected = PARTICIPANTS[1])
+    layout_sidebar(fillable = FALSE, sidebar = NULL,
+      div(style = "display:flex;justify-content:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;",
+        actionButton("pick_Mike", "Mike", class = "btn-sm",
+          style = "background:#E41A1C;color:#fff;border:none;font-family:Orbitron,sans-serif;font-size:0.85em;padding:6px 18px;"),
+        actionButton("pick_Matt", "Matt", class = "btn-sm",
+          style = "background:#377EB8;color:#fff;border:none;font-family:Orbitron,sans-serif;font-size:0.85em;padding:6px 18px;"),
+        actionButton("pick_Brian", "Brian", class = "btn-sm",
+          style = "background:#4DAF4A;color:#fff;border:none;font-family:Orbitron,sans-serif;font-size:0.85em;padding:6px 18px;"),
+        actionButton("pick_Tom", "Tom", class = "btn-sm",
+          style = "background:#FF7F00;color:#fff;border:none;font-family:Orbitron,sans-serif;font-size:0.85em;padding:6px 18px;")
       ),
       layout_columns(col_widths = c(6, 6),
-        card(card_header("Drivers Already Used"), uiOutput("used_drivers_cards")),
-        card(card_header("Drivers Still Available"), uiOutput("available_drivers_cards"))
+        card(card_header(uiOutput("used_header_text")), uiOutput("used_drivers_cards")),
+        card(card_header(uiOutput("avail_header_text")), uiOutput("available_drivers_cards"))
       )
+    )
+  ),
+
+  # ---- Roster Tab ----
+  nav_panel("Roster",
+    layout_sidebar(fillable = FALSE, sidebar = NULL,
+      card(card_header("2026 NASCAR Cup Series Roster"),
+           uiOutput("roster_cards"))
     )
   )
 )
@@ -552,14 +577,28 @@ server <- function(input, output, session) {
     wide %>% left_join(avg, by = "participant") %>% rename(Participant = participant)
   }, striped = TRUE, hover = TRUE, bordered = TRUE, align = "c")
 
-  # ---- Drivers used (with card display) ----
+  # ---- Drivers Used: button-based participant selection ----
+  selected_participant <- reactiveVal("Mike")
+
+  observeEvent(input$pick_Mike, selected_participant("Mike"))
+  observeEvent(input$pick_Matt, selected_participant("Matt"))
+  observeEvent(input$pick_Brian, selected_participant("Brian"))
+  observeEvent(input$pick_Tom, selected_participant("Tom"))
+
+  output$used_header_text <- renderUI({
+    tags$span(paste0(selected_participant(), " — Drivers Used"))
+  })
+  output$avail_header_text <- renderUI({
+    tags$span(paste0(selected_participant(), " — Still Available"))
+  })
+
   output$used_drivers_cards <- renderUI({
-    req(input$participant_select)
+    p <- selected_participant()
     pl <- picks_long(); drv <- drivers(); sched <- schedule(); sc <- scores()
     if (nrow(pl) == 0) return(tags$p(style = "color:#888;", "No picks yet"))
 
     used <- pl %>%
-      filter(participant == input$participant_select) %>%
+      filter(participant == p) %>%
       left_join(drv, by = "car_number") %>%
       left_join(sched %>% select(race_num, track_short), by = c("race_number" = "race_num")) %>%
       left_join(sc %>% select(participant, race_number, car_number, points),
@@ -582,9 +621,9 @@ server <- function(input, output, session) {
   })
 
   output$available_drivers_cards <- renderUI({
-    req(input$participant_select)
+    p <- selected_participant()
     used_cars <- picks_long() %>%
-      filter(participant == input$participant_select) %>%
+      filter(participant == p) %>%
       pull(car_number) %>% unique()
     drv <- drivers()
     available <- drv %>% filter(!car_number %in% used_cars) %>% arrange(car_number)
@@ -596,6 +635,59 @@ server <- function(input, output, session) {
       HTML(build_driver_card(
         r$car_number, r$driver, r$team, r$manufacturer,
         r$headshot_url, r$number_url
+      ))
+    })
+    div(style = "display:flex;flex-wrap:wrap;justify-content:center;", cards)
+  })
+
+  # ---- Roster Tab ----
+  # Participant initials and colors for pick badges
+  PARTICIPANT_INITIALS <- c("Mike" = "MT", "Matt" = "MD", "Brian" = "BM", "Tom" = "TM")
+
+  output$roster_cards <- renderUI({
+    drv <- drivers(); res <- results(); pl <- picks_long()
+
+    # Compute average points per car across all races
+    driver_avg <- if (nrow(res) > 0) {
+      res %>%
+        group_by(car_number) %>%
+        summarise(avg_pts = round(mean(points, na.rm = TRUE), 1),
+                  races = n(), .groups = "drop")
+    } else {
+      tibble(car_number = integer(), avg_pts = numeric(), races = integer())
+    }
+
+    # Who picked each car and when
+    pick_map <- if (nrow(pl) > 0) {
+      pl %>% select(participant, car_number) %>% distinct()
+    } else {
+      tibble(participant = character(), car_number = integer())
+    }
+
+    drv <- drv %>%
+      left_join(driver_avg, by = "car_number") %>%
+      mutate(avg_pts = ifelse(is.na(avg_pts), 0, avg_pts),
+             races = ifelse(is.na(races), 0, races)) %>%
+      arrange(desc(avg_pts))
+
+    cards <- lapply(seq_len(nrow(drv)), function(i) {
+      r <- drv[i, ]
+      # Build pick badges
+      pickers <- pick_map %>% filter(car_number == r$car_number) %>% pull(participant)
+      badge_html <- paste(sapply(pickers, function(p) {
+        sprintf('<span style="display:inline-block;width:24px;height:24px;border-radius:50%%;background:%s;color:#fff;font-size:10px;font-weight:bold;font-family:Orbitron,sans-serif;line-height:24px;text-align:center;margin:0 2px;">%s</span>',
+                PARTICIPANT_COLORS[p], PARTICIPANT_INITIALS[p])
+      }), collapse = "")
+
+      info <- if (r$races > 0) {
+        paste0(r$avg_pts, " avg pts (", r$races, " races)")
+      } else "No race data"
+
+      HTML(build_driver_card(
+        r$car_number, r$driver, r$team, r$manufacturer,
+        r$headshot_url, r$number_url,
+        extra_info = info,
+        badge_html = badge_html
       ))
     })
     div(style = "display:flex;flex-wrap:wrap;justify-content:center;", cards)
