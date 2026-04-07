@@ -403,11 +403,12 @@ server <- function(input, output, session) {
   output$cumulative_chart <- renderPlot({
     st <- standings()
     if (nrow(st) == 0) return(NULL)
+    race_labels <- st %>% distinct(race_number, track_short) %>% arrange(race_number)
     ggplot(st, aes(x = race_number, y = cumulative_points,
                    color = participant, group = participant)) +
       geom_line(linewidth = 1.2) + geom_point(size = 2.5) +
       scale_color_manual(values = PARTICIPANT_COLORS) +
-      scale_x_continuous(breaks = unique(st$race_number), labels = unique(st$track_short)) +
+      scale_x_continuous(breaks = race_labels$race_number, labels = race_labels$track_short) +
       labs(x = NULL, y = "Cumulative Points", color = NULL) +
       theme_minimal(base_size = 14) +
       theme(
@@ -477,7 +478,7 @@ server <- function(input, output, session) {
       left_join(sched %>% select(race_num, track_short), by = c("race_number" = "race_num")) %>%
       mutate(label = paste0("#", car_number, " (", points, ")")) %>%
       select(participant, track_short, label) %>%
-      pivot_wider(names_from = track_short, values_from = label)
+      pivot_wider(names_from = track_short, values_from = label, values_fn = list(label = first))
     totals <- sc %>% group_by(participant) %>% summarise(Total = sum(points, na.rm = TRUE))
     wide %>% left_join(totals, by = "participant") %>% rename(Participant = participant)
   }, striped = TRUE, hover = TRUE, bordered = TRUE, align = "c")
@@ -489,7 +490,7 @@ server <- function(input, output, session) {
       left_join(sched %>% select(race_num, track_short), by = c("race_number" = "race_num")) %>%
       mutate(label = round(value, 1)) %>%
       select(participant, track_short, label) %>%
-      pivot_wider(names_from = track_short, values_from = label)
+      pivot_wider(names_from = track_short, values_from = label, values_fn = list(label = first))
     totals <- vs %>% group_by(participant) %>%
       summarise(`Total Value` = round(sum(value, na.rm = TRUE), 1))
     wide %>% left_join(totals, by = "participant") %>% rename(Participant = participant)
@@ -501,11 +502,12 @@ server <- function(input, output, session) {
     if (nrow(st) == 0) return(NULL)
     ranked <- st %>% group_by(race_number) %>%
       mutate(position = rank(-cumulative_points, ties.method = "min")) %>% ungroup()
+    race_labels <- ranked %>% distinct(race_number, track_short) %>% arrange(race_number)
     ggplot(ranked, aes(x = race_number, y = position, color = participant, group = participant)) +
       geom_line(linewidth = 1.2) + geom_point(size = 3) +
       scale_y_reverse(breaks = 1:4, labels = c("1st", "2nd", "3rd", "4th")) +
       scale_color_manual(values = PARTICIPANT_COLORS) +
-      scale_x_continuous(breaks = unique(ranked$race_number), labels = unique(ranked$track_short)) +
+      scale_x_continuous(breaks = race_labels$race_number, labels = race_labels$track_short) +
       labs(x = NULL, y = "Position", color = NULL) +
       theme_minimal(base_size = 14) +
       theme(
@@ -526,7 +528,7 @@ server <- function(input, output, session) {
     wide <- wr %>%
       left_join(sched %>% select(race_num, track_short), by = c("race_number" = "race_num")) %>%
       select(participant, track_short, weekly_rank) %>%
-      pivot_wider(names_from = track_short, values_from = weekly_rank)
+      pivot_wider(names_from = track_short, values_from = weekly_rank, values_fn = list(weekly_rank = first))
     avg <- wr %>% group_by(participant) %>%
       summarise(`Avg Rank` = round(mean(weekly_rank, na.rm = TRUE), 2))
     wide %>% left_join(avg, by = "participant") %>% rename(Participant = participant)
