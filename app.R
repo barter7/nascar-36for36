@@ -11,6 +11,7 @@ library(tidyr)
 library(readr)
 library(stringr)
 library(ggplot2)
+if (requireNamespace("png", quietly = TRUE)) library(png)
 
 # ---- Configuration ----
 PARTICIPANTS <- c("Mike", "Matt", "Brian", "Tom")
@@ -305,10 +306,8 @@ ui <- page_navbar(
 
   # ---- Weekly Results Tab ----
   nav_panel("Weekly Results",
-    layout_sidebar(fillable = FALSE,
-      sidebar = sidebar(
-        selectInput("race_select", "Select Race", choices = NULL, selected = NULL)
-      ),
+    layout_sidebar(fillable = FALSE, sidebar = NULL,
+      uiOutput("race_buttons"),
       layout_columns(col_widths = c(6, 6),
         card(card_header("Picks & Points"), uiOutput("weekly_cards")),
         card(card_header("Weekly Points"), plotOutput("weekly_bar", height = "300px"))
@@ -320,7 +319,7 @@ ui <- page_navbar(
   nav_panel("Pick History",
     layout_sidebar(fillable = FALSE, sidebar = NULL,
       card(card_header("All Picks - Car # & Points Earned"),
-           div(style = "overflow-x: auto;", tableOutput("picks_grid"))),
+           div(style = "overflow-x: auto;", uiOutput("picks_grid_visual"))),
       card(card_header("Value Over Average (Points vs Driver Season Avg)"),
            div(style = "overflow-x: auto;", tableOutput("value_grid")))
     )
@@ -390,14 +389,34 @@ server <- function(input, output, session) {
     sort(unique(res$race_number))
   })
 
-  observe({
+  selected_race <- reactiveVal(NULL)
+
+  output$race_buttons <- renderUI({
     cr <- completed_races()
     sched <- schedule()
-    if (length(cr) > 0) {
-      choices <- cr
-      names(choices) <- paste0("Race ", cr, " - ", sched$track_short[match(cr, sched$race_num)])
-      updateSelectInput(session, "race_select", choices = choices, selected = max(cr))
-    }
+    if (length(cr) == 0) return(tags$p(style = "color:#888;", "No races completed yet"))
+    # Auto-select latest race if none selected
+    if (is.null(selected_race()) || !selected_race() %in% cr) selected_race(max(cr))
+    btns <- lapply(cr, function(r) {
+      label <- sched$track_short[match(r, sched$race_num)]
+      if (is.na(label)) label <- paste0("R", r)
+      is_active <- identical(as.integer(r), as.integer(selected_race()))
+      bg <- if (is_active) "#FFD700" else "#2a2a3a"
+      fg <- if (is_active) "#000" else "#aaa"
+      actionButton(
+        paste0("race_btn_", r), paste0(r, ". ", label),
+        class = "btn-sm",
+        style = sprintf("background:%s;color:%s;border:1px solid #444;font-family:Rajdhani,sans-serif;font-size:0.8em;padding:4px 8px;margin:2px;", bg, fg)
+      )
+    })
+    div(style = "display:flex;flex-wrap:wrap;justify-content:center;margin-bottom:12px;", btns)
+  })
+
+  observe({
+    cr <- completed_races()
+    lapply(cr, function(r) {
+      observeEvent(input[[paste0("race_btn_", r)]], { selected_race(r) }, ignoreInit = TRUE)
+    })
   })
 
   # ---- Summary cards ----
@@ -543,15 +562,17 @@ server <- function(input, output, session) {
   output$stage5_card <- build_stage_card(5)
   output$stage6_card <- build_stage_card(6)
 
-  # ---- Cumulative chart (base R for max compatibility) ----
+  # ---- Cumulative chart (base R with car number labels) ----
   output$cumulative_chart <- renderPlot({
     sc <- scores()
     sched <- schedule()
     if (nrow(sc) == 0) return(NULL)
 
+    # Keep car_number for labels
     race_pts <- sc %>%
       group_by(participant, race_number) %>%
-      summarise(points = sum(points, na.rm = TRUE), .groups = "drop") %>%
+      summarise(points = sum(points, na.rm = TRUE),
+                car_number = first(car_number), .groups = "drop") %>%
       arrange(participant, race_number) %>%
       group_by(participant) %>%
       mutate(cumulative_points = cumsum(points)) %>%
@@ -564,7 +585,7 @@ server <- function(input, output, session) {
 
     all_races <- sort(unique(race_pts$race_number))
     track_names <- sched_lookup$track_short[match(all_races, sched_lookup$race_num)]
-    y_max <- max(race_pts$cumulative_points, na.rm = TRUE) * 1.1
+    y_max <- max(race_pts$cumulative_points, na.rm = TRUE) * 1.15
 
     par(bg = "#161625", fg = "#e0e0e0", col.axis = "#aaaaaa", col.lab = "#e0e0e0",
         col.main = "#e0e0e0", mar = c(5, 4, 3, 1))
@@ -575,11 +596,45 @@ server <- function(input, output, session) {
     axis(1, at = all_races, labels = track_names, las = 2, cex.axis = 0.85)
     grid(col = "#2a2a3a", lty = 1)
 
+    # Try to load car badge images
+    badge_cache <- list()
+    for (car in unique(race_pts$car_number)) {
+      local_path <- file.path("www", "img", "numbers", paste0(car, ".png"))
+      if (file.exists(local_path)) {
+        tryCatch({
+          badge_cache[[as.character(car)]] <- png::readPNG(local_path)
+        }, error = function(e) NULL)
+      }
+    }
+
     colors <- PARTICIPANT_COLORS
+    badge_size <- diff(range(all_races)) * 0.04
+    y_badge <- y_max * 0.03
+
     for (p in unique(race_pts$participant)) {
-      d <- race_pts %>% filter(participant == p)
+      d <- race_pts %>% filter(participant == p) %>% arrange(race_number)
       lines(d$race_number, d$cumulative_points, col = colors[p], lwd = 2.5)
-      points(d$race_number, d$cumulative_points, col = colors[p], pch = 19, cex = 1.5)
+
+      # Draw car badges or numbered circles at each point
+      for (j in seq_len(nrow(d))) {
+        car_key <- as.character(d$car_number[j])
+        x <- d$race_number[j]
+        y <- d$cumulative_points[j]
+        if (car_key %in% names(badge_cache)) {
+          tryCatch({
+            rasterImage(badge_cache[[car_key]],
+                        x - badge_size, y - y_badge,
+                        x + badge_size, y + y_badge)
+          }, error = function(e) {
+            points(x, y, col = colors[p], pch = 19, cex = 1.5)
+            text(x, y, d$car_number[j], cex = 0.5, col = "#ffffff", font = 2)
+          })
+        } else {
+          # Fallback: colored circle with car number text
+          points(x, y, col = colors[p], pch = 19, cex = 2)
+          text(x, y, d$car_number[j], cex = 0.45, col = "#ffffff", font = 2)
+        }
+      }
     }
 
     legend("topleft", legend = names(colors), col = colors, lwd = 2.5, pch = 19,
@@ -588,8 +643,8 @@ server <- function(input, output, session) {
 
   # ---- Weekly results with driver cards ----
   output$weekly_cards <- renderUI({
-    req(input$race_select)
-    rn <- as.integer(input$race_select)
+    req(selected_race())
+    rn <- as.integer(selected_race())
     sc <- scores() %>% filter(race_number == rn)
     drv <- drivers()
     if (nrow(sc) == 0) return(tags$p(style = "color:#888;", "No data for this race"))
@@ -611,8 +666,8 @@ server <- function(input, output, session) {
   })
 
   output$weekly_bar <- renderPlot({
-    req(input$race_select)
-    rn <- as.integer(input$race_select)
+    req(selected_race())
+    rn <- as.integer(selected_race())
     sc <- scores() %>% filter(race_number == rn)
     if (nrow(sc) == 0) return(NULL)
     ggplot(sc, aes(x = reorder(participant, -points), y = points, fill = participant)) +
@@ -634,17 +689,48 @@ server <- function(input, output, session) {
   })
 
   # ---- Pick history grid ----
-  output$picks_grid <- renderTable({
+  output$picks_grid_visual <- renderUI({
     sc <- scores(); sched <- schedule()
-    if (nrow(sc) == 0) return(data.frame(Message = "No data yet"))
-    wide <- sc %>%
-      left_join(sched %>% select(race_num, track_short), by = c("race_number" = "race_num")) %>%
-      mutate(label = paste0("#", car_number, " (", points, ")")) %>%
-      select(participant, track_short, label) %>%
-      pivot_wider(names_from = track_short, values_from = label, values_fn = list(label = first))
-    totals <- sc %>% group_by(participant) %>% summarise(Total = sum(points, na.rm = TRUE))
-    wide %>% left_join(totals, by = "participant") %>% rename(Participant = participant)
-  }, striped = TRUE, hover = TRUE, bordered = TRUE, align = "c")
+    if (nrow(sc) == 0) return(tags$p(style = "color:#888;", "No data yet"))
+
+    all_races <- sort(unique(sc$race_number))
+    race_labels <- sched$track_short[match(all_races, sched$race_num)]
+    race_labels[is.na(race_labels)] <- paste0("R", all_races[is.na(race_labels)])
+
+    # Header row
+    header_cells <- c(
+      '<th style="padding:4px 6px;color:#FFD700;font-family:Orbitron,sans-serif;font-size:0.7em;position:sticky;left:0;background:#161625;z-index:1;">Player</th>',
+      sapply(seq_along(all_races), function(i) {
+        sprintf('<th style="padding:4px 6px;color:#FFD700;font-family:Orbitron,sans-serif;font-size:0.65em;text-align:center;min-width:55px;">%s</th>', race_labels[i])
+      }),
+      '<th style="padding:4px 6px;color:#FFD700;font-family:Orbitron,sans-serif;font-size:0.7em;text-align:center;">Total</th>'
+    )
+
+    rows <- lapply(PARTICIPANTS, function(p) {
+      p_scores <- sc %>% filter(participant == p)
+      total <- sum(p_scores$points, na.rm = TRUE)
+
+      cells <- sapply(all_races, function(r) {
+        row <- p_scores %>% filter(race_number == r)
+        if (nrow(row) == 0) {
+          '<td style="padding:4px;text-align:center;color:#555;">-</td>'
+        } else {
+          badge_url <- car_badge_url(row$car_number[1])
+          sprintf('<td style="padding:4px;text-align:center;"><img src="%s" style="height:28px;" onerror="this.outerHTML=\'<span style=color:#FFD700;font-weight:bold>#%s</span>\'"><div style="font-size:0.75em;color:#ccc;">%s</div></td>',
+                  badge_url, row$car_number[1], row$points[1])
+        }
+      })
+
+      sprintf('<tr><td style="padding:4px 6px;color:%s;font-weight:bold;font-family:Rajdhani,sans-serif;position:sticky;left:0;background:#161625;z-index:1;">%s</td>%s<td style="padding:4px 6px;text-align:center;color:#FFD700;font-weight:bold;">%s</td></tr>',
+              PARTICIPANT_COLORS[p], p, paste(cells, collapse = ""), total)
+    })
+
+    HTML(sprintf(
+      '<table style="border-collapse:collapse;width:100%%;"><thead><tr>%s</tr></thead><tbody>%s</tbody></table>',
+      paste(header_cells, collapse = ""),
+      paste(rows, collapse = "")
+    ))
+  })
 
   output$value_grid <- renderTable({
     vs <- value_scores(); sched <- schedule()
