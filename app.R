@@ -556,7 +556,7 @@ server <- function(input, output, session) {
     track_names <- sched_lookup$track_short[match(all_races, sched_lookup$race_num)]
     y_max <- max(race_pts$cumulative_points, na.rm = TRUE) * 1.1
 
-    par(bg = "#161625", fg = "#e0e0e0", col.axis = "#aaa", col.lab = "#e0e0e0",
+    par(bg = "#161625", fg = "#e0e0e0", col.axis = "#aaaaaa", col.lab = "#e0e0e0",
         col.main = "#e0e0e0", mar = c(5, 4, 3, 1))
 
     plot(NULL, xlim = range(all_races), ylim = c(0, y_max),
@@ -573,7 +573,7 @@ server <- function(input, output, session) {
     }
 
     legend("topleft", legend = names(colors), col = colors, lwd = 2.5, pch = 19,
-           bg = "#1a1a2e", text.col = "#e0e0e0", border = "#333", cex = 0.9)
+           bg = "#1a1a2e", text.col = "#e0e0e0", border = "#333333", cex = 0.9)
   }, bg = "#161625")
 
   # ---- Weekly results with driver cards ----
