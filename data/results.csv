@@ -44,7 +44,7 @@ race_number,car_number,driver,finish_pos,points
 2,23,Bubba Wallace,8,48
 2,60,Ryan Preece,9,35
 2,12,Ryan Blaney,10,31
-2,9,Chase Elliott,11,34
+2,9,Chase Elliott,11,38
 2,4,Noah Gragson,12,22
 2,11,Denny Hamlin,13,26
 2,54,Ty Gibbs,14,25
@@ -113,7 +113,7 @@ race_number,car_number,driver,finish_pos,points
 5,20,Christopher Bell,4,51
 5,54,Ty Gibbs,5,39
 5,17,Chris Buescher,6,29
-5,5,Kyle Larson,7,28
+5,5,Kyle Larson,7,48
 5,19,Chase Briscoe,8,27
 5,23,Bubba Wallace,9,41
 5,6,Brad Keselowski,10,25
@@ -128,7 +128,7 @@ race_number,car_number,driver,finish_pos,points
 6,12,Ryan Blaney,3,42
 6,77,Carson Hocevar,4,33
 6,2,Austin Cindric,5,31
-6,54,Ty Gibbs,6,29
+6,54,Ty Gibbs,6,33
 6,7,Daniel Suarez,7,33
 6,24,William Byron,8,34
 6,17,Chris Buescher,9,26
