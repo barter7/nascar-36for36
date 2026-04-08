@@ -11,7 +11,6 @@ library(tidyr)
 library(readr)
 library(stringr)
 library(ggplot2)
-library(googlesheets4)
 
 # ---- Configuration ----
 PARTICIPANTS <- c("Mike", "Matt", "Brian", "Tom")
@@ -21,9 +20,6 @@ PARTICIPANT_COLORS <- c(
   "Brian" = "#4DAF4A",
   "Tom"   = "#FF7F00"
 )
-
-# Google Sheet ID for picks (public, no auth needed)
-PICKS_SHEET_ID <- NULL
 
 # Manufacturer logo URLs (used as fallback if local cache missing)
 MFR_LOGOS <- list(
@@ -55,8 +51,14 @@ mfr_src <- function(manufacturer) {
 }
 
 # ---- Load data ----
-load_schedule <- function() {
-  read_csv("data/schedule.csv", show_col_types = FALSE) %>%
+load_schedule <- function(year = 2026) {
+  f <- if (year == 2025) "data/schedule_2025.csv" else "data/schedule.csv"
+  if (!file.exists(f)) {
+    # 2025 doesn't have a schedule — create a generic one
+    return(tibble(race_num = 1:36, date = as.Date(NA),
+                  track = paste("Race", 1:36), track_short = paste0("R", 1:36)))
+  }
+  read_csv(f, show_col_types = FALSE) %>%
     mutate(date = as.Date(date), race_num = as.integer(race_num))
 }
 
@@ -64,8 +66,9 @@ load_drivers <- function() {
   read_csv("data/drivers.csv", show_col_types = FALSE)
 }
 
-load_results <- function() {
-  results <- read_csv("data/results.csv", show_col_types = FALSE)
+load_results <- function(year = 2026) {
+  f <- if (year == 2025) "data/results_2025.csv" else "data/results.csv"
+  results <- read_csv(f, show_col_types = FALSE)
   if (nrow(results) == 0) return(results)
   results %>%
     mutate(
@@ -76,16 +79,9 @@ load_results <- function() {
     )
 }
 
-load_picks <- function() {
-  picks <- NULL
-  if (!is.null(PICKS_SHEET_ID)) {
-    tryCatch({
-      gs4_deauth()
-      picks <- read_sheet(PICKS_SHEET_ID, sheet = 1) %>% as.data.frame()
-    }, error = function(e) message("Could not read Google Sheet: ", e$message))
-  }
-  if (is.null(picks)) picks <- read_csv("data/picks.csv", show_col_types = FALSE)
-  picks
+load_picks <- function(year = 2026) {
+  f <- if (year == 2025) "data/picks_2025.csv" else "data/picks.csv"
+  read_csv(f, show_col_types = FALSE)
 }
 
 # ---- Transform picks from wide to long ----
@@ -228,8 +224,14 @@ build_driver_card <- function(car_number, driver, team, manufacturer,
 # ===========================================================================
 ui <- page_navbar(
   title = tags$span(
-    style = "font-family:Orbitron,sans-serif;font-weight:700;letter-spacing:2px;",
-    "NASCAR 36 for 36 ", tags$span(style = "font-size:0.7em;color:#FFD700;", "2026")
+    style = "font-family:Orbitron,sans-serif;font-weight:700;letter-spacing:2px;display:flex;align-items:center;gap:10px;",
+    "NASCAR 36 for 36",
+    tags$div(style = "display:inline-flex;gap:4px;",
+      actionButton("year_2026", "2026", class = "btn-sm",
+        style = "background:#FFD700;color:#000;border:none;font-family:Orbitron,sans-serif;font-size:0.6em;padding:3px 8px;border-radius:4px;"),
+      actionButton("year_2025", "2025", class = "btn-sm",
+        style = "background:#444;color:#aaa;border:none;font-family:Orbitron,sans-serif;font-size:0.6em;padding:3px 8px;border-radius:4px;")
+    )
   ),
   theme = bs_theme(
     version = 5,
@@ -360,10 +362,16 @@ ui <- page_navbar(
 # ===========================================================================
 server <- function(input, output, session) {
 
-  schedule <- reactive(load_schedule())
+  # ---- Year toggle ----
+  selected_year <- reactiveVal(2026)
+
+  observeEvent(input$year_2026, selected_year(2026))
+  observeEvent(input$year_2025, selected_year(2025))
+
+  schedule <- reactive(load_schedule(selected_year()))
   drivers  <- reactive(load_drivers())
-  results  <- reactive(load_results())
-  picks_wide <- reactive(load_picks())
+  results  <- reactive(load_results(selected_year()))
+  picks_wide <- reactive(load_picks(selected_year()))
 
   picks_long <- reactive({
     pw <- picks_wide()

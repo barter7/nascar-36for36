@@ -58,7 +58,7 @@ jobs:
           install.packages(c(
             "shiny", "bslib",
             "dplyr", "tidyr", "ggplot2", "readr", "stringr",
-            "googlesheets4", "rsconnect"
+            "rsconnect"
           ))
         shell: Rscript {0}
 
