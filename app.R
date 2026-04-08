@@ -249,7 +249,9 @@ ui <- page_navbar(
     tags$style(HTML("
       body { background-color: #0d0d1a; font-family: Rajdhani, sans-serif; }
       .navbar { border-bottom: 2px solid #FFD700; }
-      .nav-link { font-family: Orbitron, sans-serif; font-size: 0.85em; letter-spacing: 1px; }
+      .navbar-toggler { display: none !important; }
+      .navbar-collapse { display: flex !important; }
+      .nav-link { font-family: Orbitron, sans-serif; font-size: 0.65em; letter-spacing: 0.5px; padding: 6px 8px !important; }
       .card { border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.4); }
       .card-header { font-family: Orbitron, sans-serif; font-size: 0.95em;
                      letter-spacing: 1px; color: #FFD700; background: #1a1a2e;
@@ -288,6 +290,14 @@ ui <- page_navbar(
         )
       ),
       card(card_header("Cumulative Points"), plotOutput("cumulative_chart", height = "400px"))
+    )
+  ),
+
+  # ---- Roster Tab ----
+  nav_panel("Roster",
+    layout_sidebar(fillable = FALSE, sidebar = NULL,
+      card(card_header("2026 NASCAR Cup Series Roster"),
+           uiOutput("roster_cards"))
     )
   ),
 
@@ -341,14 +351,6 @@ ui <- page_navbar(
         card(card_header(uiOutput("used_header_text")), uiOutput("used_drivers_cards")),
         card(card_header(uiOutput("avail_header_text")), uiOutput("available_drivers_cards"))
       )
-    )
-  ),
-
-  # ---- Roster Tab ----
-  nav_panel("Roster",
-    layout_sidebar(fillable = FALSE, sidebar = NULL,
-      card(card_header("2026 NASCAR Cup Series Roster"),
-           uiOutput("roster_cards"))
     )
   )
 )
@@ -679,27 +681,30 @@ server <- function(input, output, session) {
     if (nrow(st) == 0) return(NULL)
     ranked <- st %>% group_by(race_number) %>%
       mutate(position = rank(-cumulative_points, ties.method = "min")) %>% ungroup()
-    race_labels <- ranked %>% distinct(race_number, track_short) %>%
-      filter(!is.na(track_short)) %>% arrange(race_number)
-    if (nrow(race_labels) == 0) return(NULL)
-    ggplot(ranked, aes(x = race_number, y = position, color = participant, group = participant)) +
-      geom_line(size = 1.2) + geom_point(size = 3) +
-      scale_y_reverse(breaks = 1:4, labels = c("1st", "2nd", "3rd", "4th")) +
-      scale_color_manual(values = PARTICIPANT_COLORS) +
-      scale_x_continuous(breaks = race_labels$race_number, labels = race_labels$track_short) +
-      labs(x = NULL, y = "Position", color = NULL) +
-      theme_minimal(base_size = 14) +
-      theme(
-        plot.background = element_rect(fill = "#161625", color = NA),
-        panel.background = element_rect(fill = "#161625", color = NA),
-        text = element_text(color = "#e0e0e0"),
-        axis.text = element_text(color = "#aaa"),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
-        legend.position = "top",
-        panel.grid.minor = element_blank(),
-        panel.grid.major = element_line(color = "#2a2a3a")
-      )
-  })
+
+    sched <- schedule() %>% mutate(race_num = as.integer(race_num))
+    all_races <- sort(unique(ranked$race_number))
+    track_names <- sched$track_short[match(all_races, sched$race_num)]
+
+    par(bg = "#161625", fg = "#e0e0e0", col.axis = "#aaaaaa", col.lab = "#e0e0e0",
+        col.main = "#e0e0e0", mar = c(5, 4, 3, 1))
+
+    plot(NULL, xlim = range(all_races), ylim = c(4.5, 0.5),
+         xlab = "", ylab = "Position", xaxt = "n", yaxt = "n", main = "")
+    axis(1, at = all_races, labels = track_names, las = 2, cex.axis = 0.85)
+    axis(2, at = 1:4, labels = c("1st", "2nd", "3rd", "4th"), las = 1)
+    grid(col = "#2a2a3a", lty = 1)
+
+    colors <- PARTICIPANT_COLORS
+    for (p in unique(ranked$participant)) {
+      d <- ranked %>% filter(participant == p) %>% arrange(race_number)
+      lines(d$race_number, d$position, col = colors[p], lwd = 2.5)
+      points(d$race_number, d$position, col = colors[p], pch = 19, cex = 1.5)
+    }
+
+    legend("bottomleft", legend = names(colors), col = colors, lwd = 2.5, pch = 19,
+           bg = "#1a1a2e", text.col = "#e0e0e0", border = "#333333", cex = 0.9)
+  }, bg = "#161625")
 
   output$rank_grid <- renderTable({
     wr <- weekly_ranks(); sched <- schedule()
