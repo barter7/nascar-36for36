@@ -21,13 +21,13 @@ fetch_nascaR_data <- function() {
     cup <- nascaR.data::load_series("cup")
 
     results_2026 <- cup %>%
-      filter(season == 2026) %>%
+      filter(Season == 2026) %>%
       select(
-        race_number = race,
-        car_number  = car,
-        driver      = driver_name,
-        finish_pos  = finish,
-        points      = pts
+        race_number = Race,
+        car_number  = Car,
+        driver      = Driver,
+        finish_pos  = Finish,
+        points      = Pts
       ) %>%
       mutate(
         car_number = as.integer(car_number),
@@ -58,17 +58,9 @@ update_results <- function() {
       last_race <- max(existing$race_number, na.rm = TRUE)
       message(sprintf("Existing results through race %d", last_race))
     } else {
-      existing <- tibble(
-        race_number = integer(), car_number = integer(),
-        driver = character(), finish_pos = integer(), points = numeric()
-      )
       last_race <- 0
     }
   } else {
-    existing <- tibble(
-      race_number = integer(), car_number = integer(),
-      driver = character(), finish_pos = integer(), points = numeric()
-    )
     last_race <- 0
     message("No existing results file, starting fresh")
   }
@@ -76,19 +68,12 @@ update_results <- function() {
   new_data <- fetch_nascaR_data()
 
   if (!is.null(new_data) && nrow(new_data) > 0) {
-    new_races <- new_data %>% filter(race_number > last_race)
-
-    if (nrow(new_races) > 0) {
-      updated <- bind_rows(existing, new_races) %>%
-        arrange(race_number, finish_pos)
-      write_csv(updated, results_file)
-      message(sprintf("Added %d rows for races %d-%d",
-                       nrow(new_races),
-                       min(new_races$race_number),
-                       max(new_races$race_number)))
-    } else {
-      message("No new races to add")
-    }
+    # Replace all results with fresh data from nascaR.data
+    updated <- new_data %>% arrange(race_number, finish_pos)
+    write_csv(updated, results_file)
+    n_races <- n_distinct(updated$race_number)
+    message(sprintf("Wrote %d rows for %d races (races 1-%d)",
+                     nrow(updated), n_races, max(updated$race_number)))
   } else {
     message("Could not fetch new results. File unchanged.")
   }
