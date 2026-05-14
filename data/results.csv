@@ -64,7 +64,7 @@ race_number,car_number,driver,finish_pos,points
 3,5,Kyle Larson,6,29
 3,9,Chase Elliott,7,35
 3,12,Ryan Blaney,8,33
-3,16,Chris Buescher,8,43
+3,16,AJ Allmendinger,8,43
 3,14,AJ Allmendinger,9,30
 3,11,Denny Hamlin,10,25
 3,24,William Byron,11,24
@@ -164,6 +164,15 @@ race_number,car_number,driver,finish_pos,points
 8,35,Riley Herbst,0,19
 8,54,Ty Gibbs,0,59
 8,77,Carson Hocevar,0,38
+8,60,Ryan Preece,0,29
+9,17,Chris Buescher,0,29
+9,19,Chase Briscoe,0,38
 9,23,Bubba Wallace,0,39
 10,23,Bubba Wallace,0,1
 10,34,Todd Gilliland,0,34
+10,35,Riley Herbst,0,12
+10,41,Cole Custer,0,1
+11,7,Daniel Suarez,0,36
+11,71,Michael McDowell,0,10
+12,2,Austin Cindric,0,39
+12,88,Connor Zilisch,0,21
