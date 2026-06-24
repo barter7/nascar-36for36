@@ -11,21 +11,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'OPTIONS') return res.status(204).end()
 
+  const token = process.env.GH_TOKEN
+
   if (req.method === 'GET') {
-    const hasToken = !!process.env.GITHUB_TOKEN
-    const envKeys = Object.keys(process.env).filter(k => k.includes('GITHUB') || k.includes('TOKEN'))
     return res.status(200).json({
       status: 'picks API is running',
-      hasToken,
-      envKeysWithGithubOrToken: envKeys,
-      nodeVersion: process.version,
+      hasToken: !!token,
     })
   }
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' })
 
-  const token = process.env.GITHUB_TOKEN
-  if (!token) return res.status(500).json({ error: 'GITHUB_TOKEN not set. Check Vercel env vars.' })
+  if (!token) return res.status(500).json({ error: 'GH_TOKEN not set' })
 
   try {
     const { participant, race, car_number } = req.body
