@@ -74,6 +74,19 @@ export function picksToLong(picks: Pick[]): { participant: string; race_number: 
   return out
 }
 
+export function getLastPickedRace(picks: Pick[]): Record<string, number> {
+  const result: Record<string, number> = {}
+  for (const p of picks) {
+    let last = 0
+    for (let r = 36; r >= 1; r--) {
+      const val = p[`race_${r}`]
+      if (val != null && val !== '') { last = r; break }
+    }
+    result[p.participant] = last
+  }
+  return result
+}
+
 export function computeScores(picksLong: ReturnType<typeof picksToLong>, results: Result[]): Score[] {
   const rMap = new Map<string, Result>()
   for (const r of results) rMap.set(`${r.race_number}-${r.car_number}`, r)
