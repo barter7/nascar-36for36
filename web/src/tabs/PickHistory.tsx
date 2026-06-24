@@ -166,7 +166,7 @@ export default function PickHistory({ scores, schedule, completedRaces, results,
                 {allRaces.map(r => {
                   const label = schedule.find(s => s.race_num === r)?.track_short || `R${r}`
                   const isNext = !completedRaces.includes(r)
-                  return <th key={r} style={{ minWidth: 55, fontSize: '0.65em', color: isNext ? '#FFD700' : undefined }}>{label}{isNext ? ' *' : ''}</th>
+                  return <th key={r} style={{ minWidth: 55, fontSize: '0.65em', color: isNext ? '#FFD700' : undefined }}><div style={{ fontSize: '0.85em', color: '#666' }}>R{r}</div>{label}{isNext ? ' *' : ''}</th>
                 })}
                 <th>Total</th>
               </tr>
@@ -200,7 +200,7 @@ export default function PickHistory({ scores, schedule, completedRaces, results,
                 <th style={{ position: 'sticky', left: 0, background: '#161625', zIndex: 1 }}>Player</th>
                 {allRaces.filter(r => completedRaces.includes(r)).map(r => {
                   const label = schedule.find(s => s.race_num === r)?.track_short || `R${r}`
-                  return <th key={r} style={{ minWidth: 50, fontSize: '0.65em' }}>{label}</th>
+                  return <th key={r} style={{ minWidth: 50, fontSize: '0.65em' }}><div style={{ fontSize: '0.85em', color: '#666' }}>R{r}</div>{label}</th>
                 })}
                 <th>Total</th>
               </tr>
