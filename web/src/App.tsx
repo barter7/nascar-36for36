@@ -60,7 +60,14 @@ export default function App() {
             {tab === 'Standings' && <Standings scores={scores} schedule={schedule} completedRaces={completedRaces} results={results} />}
             {tab === 'Roster' && <Roster drivers={drivers} results={results} picksLong={picksLong} />}
             {tab === 'Weekly' && <WeeklyResults scores={scores} schedule={schedule} completedRaces={completedRaces} drivers={drivers} />}
-            {tab === 'Picks' && <PickHistory scores={scores} schedule={schedule} completedRaces={completedRaces} results={results} lastPicked={lastPicked} picksLong={picksLong} />}
+            {tab === 'Picks' && <PickHistory scores={scores} schedule={schedule} completedRaces={completedRaces} results={results} lastPicked={lastPicked} picksLong={picksLong} drivers={drivers} onPickSaved={() => {
+                      loadData(year).then(d => {
+                        const pl = picksToLong(d.picks)
+                        setPicksLong(pl)
+                        setScores(computeScores(pl, d.results))
+                        setLastPicked(getLastPickedRace(d.picks))
+                      })
+                    }} />}
             {tab === 'Rankings' && <Rankings scores={scores} schedule={schedule} completedRaces={completedRaces} />}
             {tab === 'Drivers' && <DriversUsed drivers={drivers} picksLong={picksLong} scores={scores} schedule={schedule} />}
           </>

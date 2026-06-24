@@ -1,4 +1,7 @@
 {
   "buildCommand": "cd web && npm install && npm run build && cp -r ../data dist/data",
-  "outputDirectory": "web/dist"
+  "outputDirectory": "web/dist",
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/:path*" }
+  ]
 }
