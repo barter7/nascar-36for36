@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { loadData, picksToLong, computeScores, getLastPickedRace, type Driver, type Result, type Schedule, type Score, type Pick } from './data'
 import Standings from './tabs/Standings'
 import Roster from './tabs/Roster'
@@ -7,11 +7,19 @@ import PickHistory from './tabs/PickHistory'
 import Rankings from './tabs/Rankings'
 import DriversUsed from './tabs/DriversUsed'
 
-const TABS = ['Standings', 'Roster', 'Weekly', 'Picks', 'Rankings', 'Drivers']
+const TABS = ['Picks', 'Standings', 'Roster', 'Weekly', 'Rankings', 'Drivers']
+
+function getTabFromHash(): string {
+  const hash = window.location.hash.replace('#', '')
+  if (hash && TABS.some(t => t.toLowerCase() === hash.toLowerCase())) {
+    return TABS.find(t => t.toLowerCase() === hash.toLowerCase())!
+  }
+  return TABS[0]
+}
 
 export default function App() {
   const [year, setYear] = useState(2026)
-  const [tab, setTab] = useState('Standings')
+  const [tab, setTab] = useState(getTabFromHash)
   const [drivers, setDrivers] = useState<Driver[]>([])
   const [results, setResults] = useState<Result[]>([])
   const [schedule, setSchedule] = useState<Schedule[]>([])
@@ -19,6 +27,17 @@ export default function App() {
   const [picksLong, setPicksLong] = useState<ReturnType<typeof picksToLong>>([])
   const [lastPicked, setLastPicked] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
+
+  const setTabWithHash = useCallback((t: string) => {
+    setTab(t)
+    window.location.hash = t.toLowerCase()
+  }, [])
+
+  useEffect(() => {
+    const onHashChange = () => setTab(getTabFromHash())
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
 
   useEffect(() => {
     setLoading(true)
@@ -49,7 +68,7 @@ export default function App() {
       </nav>
       <div className="tabs">
         {TABS.map(t => (
-          <button key={t} className={`tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>{t}</button>
+          <button key={t} className={`tab ${tab === t ? 'active' : ''}`} onClick={() => setTabWithHash(t)}>{t}</button>
         ))}
       </div>
       <div className="content">
@@ -57,9 +76,6 @@ export default function App() {
           <div className="loading">Loading data...</div>
         ) : (
           <>
-            {tab === 'Standings' && <Standings scores={scores} schedule={schedule} completedRaces={completedRaces} results={results} />}
-            {tab === 'Roster' && <Roster drivers={drivers} results={results} picksLong={picksLong} />}
-            {tab === 'Weekly' && <WeeklyResults scores={scores} schedule={schedule} completedRaces={completedRaces} drivers={drivers} />}
             {tab === 'Picks' && <PickHistory scores={scores} schedule={schedule} completedRaces={completedRaces} results={results} lastPicked={lastPicked} picksLong={picksLong} drivers={drivers} onPickSaved={() => {
                       loadData(year).then(d => {
                         const pl = picksToLong(d.picks)
@@ -68,6 +84,9 @@ export default function App() {
                         setLastPicked(getLastPickedRace(d.picks))
                       })
                     }} />}
+            {tab === 'Standings' && <Standings scores={scores} schedule={schedule} completedRaces={completedRaces} results={results} />}
+            {tab === 'Roster' && <Roster drivers={drivers} results={results} picksLong={picksLong} />}
+            {tab === 'Weekly' && <WeeklyResults scores={scores} schedule={schedule} completedRaces={completedRaces} drivers={drivers} />}
             {tab === 'Rankings' && <Rankings scores={scores} schedule={schedule} completedRaces={completedRaces} />}
             {tab === 'Drivers' && <DriversUsed drivers={drivers} picksLong={picksLong} scores={scores} schedule={schedule} />}
           </>
