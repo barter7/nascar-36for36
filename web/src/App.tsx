@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { loadData, picksToLong, computeScores, type Driver, type Result, type Schedule, type Score } from './data'
+import { loadData, picksToLong, computeScores, getLastPickedRace, type Driver, type Result, type Schedule, type Score, type Pick } from './data'
 import Standings from './tabs/Standings'
 import Roster from './tabs/Roster'
 import WeeklyResults from './tabs/WeeklyResults'
@@ -17,6 +17,7 @@ export default function App() {
   const [schedule, setSchedule] = useState<Schedule[]>([])
   const [scores, setScores] = useState<Score[]>([])
   const [picksLong, setPicksLong] = useState<ReturnType<typeof picksToLong>>([])
+  const [lastPicked, setLastPicked] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -28,6 +29,7 @@ export default function App() {
       const pl = picksToLong(d.picks)
       setPicksLong(pl)
       setScores(computeScores(pl, d.results))
+      setLastPicked(getLastPickedRace(d.picks))
       setLoading(false)
     })
   }, [year])
@@ -58,7 +60,7 @@ export default function App() {
             {tab === 'Standings' && <Standings scores={scores} schedule={schedule} completedRaces={completedRaces} results={results} />}
             {tab === 'Roster' && <Roster drivers={drivers} results={results} picksLong={picksLong} />}
             {tab === 'Weekly' && <WeeklyResults scores={scores} schedule={schedule} completedRaces={completedRaces} drivers={drivers} />}
-            {tab === 'Picks' && <PickHistory scores={scores} schedule={schedule} completedRaces={completedRaces} results={results} />}
+            {tab === 'Picks' && <PickHistory scores={scores} schedule={schedule} completedRaces={completedRaces} results={results} lastPicked={lastPicked} picksLong={picksLong} />}
             {tab === 'Rankings' && <Rankings scores={scores} schedule={schedule} completedRaces={completedRaces} />}
             {tab === 'Drivers' && <DriversUsed drivers={drivers} picksLong={picksLong} scores={scores} schedule={schedule} />}
           </>

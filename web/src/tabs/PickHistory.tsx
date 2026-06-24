@@ -1,11 +1,12 @@
 import { useMemo } from 'react'
-import { PARTICIPANTS, COLORS, carBadgeUrl, type Score, type Schedule, type Result } from '../data'
+import { PARTICIPANTS, COLORS, carBadgeUrl, type Score, type Schedule, type Result, type picksToLong } from '../data'
 
 interface Props {
   scores: Score[]; schedule: Schedule[]; completedRaces: number[]; results: Result[];
+  lastPicked: Record<string, number>; picksLong: ReturnType<typeof picksToLong>;
 }
 
-export default function PickHistory({ scores, schedule, completedRaces, results }: Props) {
+export default function PickHistory({ scores, schedule, completedRaces, results, lastPicked, picksLong }: Props) {
   const driverAvg = useMemo(() => {
     const map: Record<string, { total: number; count: number }> = {}
     for (const r of results) {
@@ -42,7 +43,14 @@ export default function PickHistory({ scores, schedule, completedRaces, results 
                     <td style={{ color: COLORS[p], fontWeight: 'bold', position: 'sticky', left: 0, background: '#161625', zIndex: 1 }}>{p}</td>
                     {completedRaces.map(r => {
                       const sc = pScores.find(s => s.race_number === r)
-                      if (!sc) return <td key={r} style={{ color: '#555' }}>-</td>
+                      if (!sc) {
+                        const hasPick = picksLong.some(pl => pl.participant === p && pl.race_number === r)
+                        const withinRange = r <= (lastPicked[p] || 0)
+                        if (withinRange && !hasPick) {
+                          return <td key={r} style={{ fontSize: '1.2em' }} title="Missed pick">😢</td>
+                        }
+                        return <td key={r} style={{ color: '#555' }}>-</td>
+                      }
                       return (
                         <td key={r}>
                           <img src={carBadgeUrl(sc.car_number)} alt={`#${sc.car_number}`}
@@ -63,6 +71,7 @@ export default function PickHistory({ scores, schedule, completedRaces, results 
           </table>
         </div>
       </div>
+
       <div className="card">
         <div className="card-header">Value Over Average</div>
         <div className="card-body" style={{ overflowX: 'auto' }}>
@@ -86,7 +95,12 @@ export default function PickHistory({ scores, schedule, completedRaces, results 
                     <td style={{ color: COLORS[p], fontWeight: 'bold', position: 'sticky', left: 0, background: '#161625', zIndex: 1 }}>{p}</td>
                     {completedRaces.map(r => {
                       const sc = pScores.find(s => s.race_number === r)
-                      if (!sc) return <td key={r} style={{ color: '#555' }}>-</td>
+                      if (!sc) {
+                        const withinRange = r <= (lastPicked[p] || 0)
+                        const hasPick = picksLong.some(pl => pl.participant === p && pl.race_number === r)
+                        if (withinRange && !hasPick) return <td key={r} style={{ fontSize: '1.2em' }}>😢</td>
+                        return <td key={r} style={{ color: '#555' }}>-</td>
+                      }
                       const key = `${sc.car_number}-${sc.driver}`
                       const avg = driverAvg[key]
                       const val = avg ? sc.points - avg.total / avg.count : 0
