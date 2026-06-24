@@ -66,16 +66,10 @@ export default function PickHistory({ scores, schedule, completedRaces, results,
     setSaving(false)
   }
 
-  const removePick = async (participant: string, race: number) => {
-    if (!window.confirm('Remove this pick?')) return
-    await savePick(participant, race, null)
-  }
-
   const renderPickCell = (p: string, r: number) => {
     const sc = scores.find(s => s.participant === p && s.race_number === r)
     const hasPick = picksLong.some(pl => pl.participant === p && pl.race_number === r)
     const withinRange = r <= (lastPicked[p] || 0)
-    const isCompleted = completedRaces.includes(r)
     const isEditing = editing?.participant === p && editing?.race === r
 
     if (isEditing) {
@@ -86,14 +80,15 @@ export default function PickHistory({ scores, schedule, completedRaces, results,
             autoFocus
             style={{ background: '#1e1e2e', color: '#e0e0e0', border: '1px solid #FFD700', borderRadius: 4, padding: '4px', fontSize: '0.8em', width: '100%' }}
             onChange={e => {
-              if (e.target.value === 'REMOVE') removePick(p, r)
-              else if (e.target.value) savePick(p, r, Number(e.target.value))
+              const val = e.target.value
+              if (val === 'REMOVE') savePick(p, r, null)
+              else if (val) savePick(p, r, Number(val))
             }}
-            onBlur={() => !saving && setEditing(null)}
+            onBlur={() => { if (!saving) setTimeout(() => setEditing(null), 200) }}
             disabled={saving}
           >
             <option value="">Select...</option>
-            {(hasPick || sc) && <option value="REMOVE" style={{ color: '#f87171' }}>❌ Remove pick</option>}
+            {(hasPick || sc) && <option value="REMOVE">Remove pick</option>}
             {available.map(d => (
               <option key={d.car_number} value={d.car_number}>#{d.car_number} {d.driver}</option>
             ))}
@@ -104,13 +99,8 @@ export default function PickHistory({ scores, schedule, completedRaces, results,
 
     if (sc) {
       return (
-        <td key={r} style={{ cursor: isCompleted ? 'default' : 'pointer' }}
-          onClick={() => {
-            if (isCompleted) return
-            if (window.confirm(`Pick for this race has already been saved (#${sc.car_number} ${sc.driver}). Are you sure you'd like to change it?`)) {
-              setEditing({ participant: p, race: r })
-            }
-          }}>
+        <td key={r} style={{ cursor: 'pointer' }}
+          onClick={() => setEditing({ participant: p, race: r })}>
           <img src={carBadgeUrl(sc.car_number)} alt={`#${sc.car_number}`}
             style={{ height: 28 }}
             onError={e => {
@@ -139,7 +129,8 @@ export default function PickHistory({ scores, schedule, completedRaces, results,
     }
 
     if (withinRange) {
-      return <td key={r} style={{ fontSize: '1.2em', background: 'rgba(180,30,30,0.3)', borderRadius: 4 }} title="Missed pick">
+      return <td key={r} style={{ fontSize: '1.2em', background: 'rgba(180,30,30,0.3)', borderRadius: 4, cursor: 'pointer' }}
+        onClick={() => setEditing({ participant: p, race: r })} title="Missed pick - tap to add">
         😢
         <div style={{ fontSize: '0.6em', color: '#f87171' }}>0</div>
       </td>
