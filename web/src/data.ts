@@ -46,6 +46,20 @@ async function loadCsv<T>(path: string): Promise<T[]> {
   return parsed.data
 }
 
+const GITHUB_RAW = 'https://raw.githubusercontent.com/barter7/nascar-36for36/main/data'
+
+async function loadPicksLive(suffix: string): Promise<Pick[]> {
+  try {
+    const res = await fetch(`${GITHUB_RAW}/picks${suffix}.csv?t=${Date.now()}`)
+    if (res.ok) {
+      const text = await res.text()
+      const parsed = Papa.parse<Pick>(text, { header: true, skipEmptyLines: true, dynamicTyping: true })
+      return parsed.data
+    }
+  } catch {}
+  return loadCsv<Pick>(`/data/picks${suffix}.csv`)
+}
+
 export async function loadData(year: number) {
   const suffix = year === 2025 ? '_2025' : ''
   const [drivers, results, schedule, picks] = await Promise.all([
@@ -56,7 +70,7 @@ export async function loadData(year: number) {
           race_num: i + 1, date: '', track: `Race ${i + 1}`, track_short: `R${i + 1}`,
         })))
       : loadCsv<Schedule>('/data/schedule.csv'),
-    loadCsv<Pick>(`/data/picks${suffix}.csv`),
+    loadPicksLive(suffix),
   ])
   return { drivers, results, schedule, picks }
 }
