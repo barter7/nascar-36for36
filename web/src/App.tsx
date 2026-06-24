@@ -53,17 +53,16 @@ export default function App() {
     })
   }, [year])
 
-  const handlePickSaved = useCallback((participant: string, race: number, carNumber: number) => {
+  const handlePickSaved = useCallback((participant: string, race: number, carNumber: number | null) => {
     setPicksLong(prev => {
       const filtered = prev.filter(p => !(p.participant === participant && p.race_number === race))
-      const updated = [...filtered, { participant, race_number: race, car_number: carNumber }]
+      const updated = carNumber ? [...filtered, { participant, race_number: race, car_number: carNumber }] : filtered
       setScores(computeScores(updated, results))
       return updated
     })
-    setLastPicked(prev => ({
-      ...prev,
-      [participant]: Math.max(prev[participant] || 0, race),
-    }))
+    if (carNumber) {
+      setLastPicked(prev => ({ ...prev, [participant]: Math.max(prev[participant] || 0, race) }))
+    }
   }, [results])
 
   const completedRaces = [...new Set(results.map(r => r.race_number))].sort((a, b) => a - b)

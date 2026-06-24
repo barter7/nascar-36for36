@@ -4,7 +4,7 @@ import { PARTICIPANTS, COLORS, carBadgeUrl, type Score, type Schedule, type Resu
 interface Props {
   scores: Score[]; schedule: Schedule[]; completedRaces: number[]; results: Result[];
   lastPicked: Record<string, number>; picksLong: ReturnType<typeof picksToLong>;
-  drivers: Driver[]; onPickSaved?: (participant: string, race: number, carNumber: number) => void;
+  drivers: Driver[]; onPickSaved?: (participant: string, race: number, carNumber: number | null) => void;
 }
 
 export default function PickHistory({ scores, schedule, completedRaces, results, lastPicked, picksLong, drivers, onPickSaved }: Props) {
@@ -45,13 +45,13 @@ export default function PickHistory({ scores, schedule, completedRaces, results,
     return drivers.filter(d => !usedCars.includes(d.car_number)).sort((a, b) => a.car_number - b.car_number)
   }, [picksLong, drivers])
 
-  const savePick = async (participant: string, race: number, carNumber: number) => {
+  const savePick = async (participant: string, race: number, carNumber: number | null) => {
     setSaving(true)
     try {
       const res = await fetch('/api/picks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ participant, race, car_number: carNumber }),
+        body: JSON.stringify({ participant, race, car_number: carNumber || 0 }),
       })
       if (res.ok) {
         onPickSaved?.(participant, race, carNumber)
@@ -64,6 +64,11 @@ export default function PickHistory({ scores, schedule, completedRaces, results,
       alert(`Error: ${e.message}`)
     }
     setSaving(false)
+  }
+
+  const removePick = async (participant: string, race: number) => {
+    if (!window.confirm('Remove this pick?')) return
+    await savePick(participant, race, null)
   }
 
   const renderPickCell = (p: string, r: number) => {
@@ -80,11 +85,15 @@ export default function PickHistory({ scores, schedule, completedRaces, results,
           <select
             autoFocus
             style={{ background: '#1e1e2e', color: '#e0e0e0', border: '1px solid #FFD700', borderRadius: 4, padding: '4px', fontSize: '0.8em', width: '100%' }}
-            onChange={e => { if (e.target.value) savePick(p, r, Number(e.target.value)) }}
+            onChange={e => {
+              if (e.target.value === 'REMOVE') removePick(p, r)
+              else if (e.target.value) savePick(p, r, Number(e.target.value))
+            }}
             onBlur={() => !saving && setEditing(null)}
             disabled={saving}
           >
             <option value="">Select...</option>
+            {(hasPick || sc) && <option value="REMOVE" style={{ color: '#f87171' }}>❌ Remove pick</option>}
             {available.map(d => (
               <option key={d.car_number} value={d.car_number}>#{d.car_number} {d.driver}</option>
             ))}
@@ -117,11 +126,7 @@ export default function PickHistory({ scores, schedule, completedRaces, results,
       const pick = picksLong.find(pl => pl.participant === p && pl.race_number === r)
       return (
         <td key={r} style={{ cursor: 'pointer', background: 'rgba(218,165,32,0.15)' }}
-          onClick={() => {
-            if (window.confirm(`Pick for this race has already been saved (#${pick!.car_number}). Are you sure you'd like to change it?`)) {
-              setEditing({ participant: p, race: r })
-            }
-          }}>
+          onClick={() => setEditing({ participant: p, race: r })}>
           <img src={carBadgeUrl(pick!.car_number)} alt={`#${pick!.car_number}`}
             style={{ height: 28 }}
             onError={e => {
