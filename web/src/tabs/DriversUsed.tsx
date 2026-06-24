@@ -47,10 +47,8 @@ export default function DriversUsed({ drivers, picksLong, scores, schedule }: Pr
             <div className="driver-grid">
               {usedData.map(u => (
                 <div key={u.race_number} className="driver-card used">
-                  <div className="driver-card-img" style={{
-                    backgroundImage: u.driver?.headshot_url ? `url(${u.driver.headshot_url})` : undefined,
-                    background: u.driver?.headshot_url ? undefined : '#1a1a2e',
-                  }}>
+                  <div className="driver-card-img" style={{ background: '#1a1a2e', position: 'relative' }}>
+                    {u.driver?.headshot_url && <img src={u.driver.headshot_url} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />}
                     <div className="driver-card-number">
                       <img src={carBadgeUrl(u.car_number)} alt={`#${u.car_number}`}
                         onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
@@ -81,10 +79,8 @@ export default function DriversUsed({ drivers, picksLong, scores, schedule }: Pr
             <div className="driver-grid">
               {available.map(d => (
                 <div key={d.car_number} className="driver-card">
-                  <div className="driver-card-img" style={{
-                    backgroundImage: d.headshot_url ? `url(${d.headshot_url})` : undefined,
-                    background: d.headshot_url ? undefined : '#1a1a2e',
-                  }}>
+                  <div className="driver-card-img" style={{ background: '#1a1a2e', position: 'relative' }}>
+                    {d.headshot_url && <img src={d.headshot_url} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />}
                     <div className="driver-card-number">
                       <img src={carBadgeUrl(d.car_number)} alt={`#${d.car_number}`}
                         onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />

@@ -53,10 +53,17 @@ export default function Roster({ drivers, results, picksLong }: Props) {
                       : <span key={p} className="pick-badge empty" />
                   ))}
                 </div>
-                <div className="driver-card-img" style={{
-                  backgroundImage: d.headshot_url ? `url(${d.headshot_url})` : undefined,
-                  background: d.headshot_url ? undefined : '#1a1a2e',
-                }}>
+                <div className="driver-card-img" style={{ background: '#1a1a2e', position: 'relative' }}>
+                  {d.headshot_url && (
+                    <img src={d.headshot_url} alt={d.driver}
+                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }}
+                      onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                  )}
+                  {!d.headshot_url && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontFamily: 'Orbitron', fontSize: 48, fontWeight: 'bold', color: '#FFD700' }}>
+                      #{d.car_number}
+                    </div>
+                  )}
                   <div className="driver-card-number">
                     <img src={carBadgeUrl(d.car_number)} alt={`#${d.car_number}`}
                       onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />

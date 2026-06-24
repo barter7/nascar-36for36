@@ -48,10 +48,8 @@ export default function WeeklyResults({ scores, schedule, completedRaces, driver
                   const d = driverMap[s.car_number]
                   return (
                     <div key={s.participant} className={`driver-card ${i === 0 ? 'highlight' : ''}`}>
-                      <div className="driver-card-img" style={{
-                        backgroundImage: d?.headshot_url ? `url(${d.headshot_url})` : undefined,
-                        background: d?.headshot_url ? undefined : '#1a1a2e',
-                      }}>
+                      <div className="driver-card-img" style={{ background: '#1a1a2e', position: 'relative' }}>
+                        {d?.headshot_url && <img src={d.headshot_url} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />}
                         <div className="driver-card-number">
                           <img src={carBadgeUrl(s.car_number)} alt={`#${s.car_number}`}
                             onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
