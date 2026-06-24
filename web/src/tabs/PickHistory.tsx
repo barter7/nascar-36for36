@@ -94,9 +94,15 @@ export default function PickHistory({ scores, schedule, completedRaces, results,
     }
 
     if (sc) {
+      const handleExistingClick = () => {
+        if (isCompleted) return
+        if (window.confirm(`Pick for this race has already been saved (#${sc.car_number} ${sc.driver}). Are you sure you'd like to change it?`)) {
+          setEditing({ participant: p, race: r })
+        }
+      }
       return (
         <td key={r} style={{ cursor: isCompleted ? 'default' : 'pointer' }}
-          onClick={() => !isCompleted && setEditing({ participant: p, race: r })}>
+          onClick={handleExistingClick}>
           <img src={carBadgeUrl(sc.car_number)} alt={`#${sc.car_number}`}
             style={{ height: 28 }}
             onError={e => {
@@ -110,8 +116,13 @@ export default function PickHistory({ scores, schedule, completedRaces, results,
 
     if (hasPick) {
       const pick = picksLong.find(pl => pl.participant === p && pl.race_number === r)
+      const handlePendingClick = () => {
+        if (window.confirm(`Pick for this race has already been saved (#${pick!.car_number}). Are you sure you'd like to change it?`)) {
+          setEditing({ participant: p, race: r })
+        }
+      }
       return (
-        <td key={r}>
+        <td key={r} style={{ cursor: 'pointer' }} onClick={handlePendingClick}>
           <img src={carBadgeUrl(pick!.car_number)} alt={`#${pick!.car_number}`}
             style={{ height: 28 }}
             onError={e => {
