@@ -53,6 +53,19 @@ export default function App() {
     })
   }, [year])
 
+  const handlePickSaved = useCallback((participant: string, race: number, carNumber: number) => {
+    setPicksLong(prev => {
+      const filtered = prev.filter(p => !(p.participant === participant && p.race_number === race))
+      const updated = [...filtered, { participant, race_number: race, car_number: carNumber }]
+      setScores(computeScores(updated, results))
+      return updated
+    })
+    setLastPicked(prev => ({
+      ...prev,
+      [participant]: Math.max(prev[participant] || 0, race),
+    }))
+  }, [results])
+
   const completedRaces = [...new Set(results.map(r => r.race_number))].sort((a, b) => a - b)
 
   return (
@@ -76,14 +89,7 @@ export default function App() {
           <div className="loading">Loading data...</div>
         ) : (
           <>
-            {tab === 'Picks' && <PickHistory scores={scores} schedule={schedule} completedRaces={completedRaces} results={results} lastPicked={lastPicked} picksLong={picksLong} drivers={drivers} onPickSaved={() => {
-                      loadData(year).then(d => {
-                        const pl = picksToLong(d.picks)
-                        setPicksLong(pl)
-                        setScores(computeScores(pl, d.results))
-                        setLastPicked(getLastPickedRace(d.picks))
-                      })
-                    }} />}
+            {tab === 'Picks' && <PickHistory scores={scores} schedule={schedule} completedRaces={completedRaces} results={results} lastPicked={lastPicked} picksLong={picksLong} drivers={drivers} onPickSaved={handlePickSaved} />}
             {tab === 'Standings' && <Standings scores={scores} schedule={schedule} completedRaces={completedRaces} results={results} />}
             {tab === 'Roster' && <Roster drivers={drivers} results={results} picksLong={picksLong} />}
             {tab === 'Weekly' && <WeeklyResults scores={scores} schedule={schedule} completedRaces={completedRaces} drivers={drivers} />}
