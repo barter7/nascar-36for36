@@ -4,7 +4,7 @@ import { PARTICIPANTS, COLORS, carBadgeUrl, type Score, type Schedule, type Resu
 interface Props {
   scores: Score[]; schedule: Schedule[]; completedRaces: number[]; results: Result[];
   lastPicked: Record<string, number>; picksLong: ReturnType<typeof picksToLong>;
-  drivers: Driver[]; onPickSaved?: () => void;
+  drivers: Driver[]; onPickSaved?: (participant: string, race: number, carNumber: number) => void;
 }
 
 export default function PickHistory({ scores, schedule, completedRaces, results, lastPicked, picksLong, drivers, onPickSaved }: Props) {
@@ -54,7 +54,7 @@ export default function PickHistory({ scores, schedule, completedRaces, results,
         body: JSON.stringify({ participant, race, car_number: carNumber }),
       })
       if (res.ok) {
-        onPickSaved?.()
+        onPickSaved?.(participant, race, carNumber)
         setEditing(null)
       } else {
         const err = await res.json()
@@ -81,7 +81,7 @@ export default function PickHistory({ scores, schedule, completedRaces, results,
             autoFocus
             style={{ background: '#1e1e2e', color: '#e0e0e0', border: '1px solid #FFD700', borderRadius: 4, padding: '4px', fontSize: '0.8em', width: '100%' }}
             onChange={e => { if (e.target.value) savePick(p, r, Number(e.target.value)) }}
-            onBlur={() => setEditing(null)}
+            onBlur={() => !saving && setEditing(null)}
             disabled={saving}
           >
             <option value="">Select...</option>
@@ -94,15 +94,14 @@ export default function PickHistory({ scores, schedule, completedRaces, results,
     }
 
     if (sc) {
-      const handleExistingClick = () => {
-        if (isCompleted) return
-        if (window.confirm(`Pick for this race has already been saved (#${sc.car_number} ${sc.driver}). Are you sure you'd like to change it?`)) {
-          setEditing({ participant: p, race: r })
-        }
-      }
       return (
         <td key={r} style={{ cursor: isCompleted ? 'default' : 'pointer' }}
-          onClick={handleExistingClick}>
+          onClick={() => {
+            if (isCompleted) return
+            if (window.confirm(`Pick for this race has already been saved (#${sc.car_number} ${sc.driver}). Are you sure you'd like to change it?`)) {
+              setEditing({ participant: p, race: r })
+            }
+          }}>
           <img src={carBadgeUrl(sc.car_number)} alt={`#${sc.car_number}`}
             style={{ height: 28 }}
             onError={e => {
@@ -116,13 +115,13 @@ export default function PickHistory({ scores, schedule, completedRaces, results,
 
     if (hasPick) {
       const pick = picksLong.find(pl => pl.participant === p && pl.race_number === r)
-      const handlePendingClick = () => {
-        if (window.confirm(`Pick for this race has already been saved (#${pick!.car_number}). Are you sure you'd like to change it?`)) {
-          setEditing({ participant: p, race: r })
-        }
-      }
       return (
-        <td key={r} style={{ cursor: 'pointer', background: 'rgba(218,165,32,0.15)' }} onClick={handlePendingClick}>
+        <td key={r} style={{ cursor: 'pointer', background: 'rgba(218,165,32,0.15)' }}
+          onClick={() => {
+            if (window.confirm(`Pick for this race has already been saved (#${pick!.car_number}). Are you sure you'd like to change it?`)) {
+              setEditing({ participant: p, race: r })
+            }
+          }}>
           <img src={carBadgeUrl(pick!.car_number)} alt={`#${pick!.car_number}`}
             style={{ height: 28 }}
             onError={e => {
