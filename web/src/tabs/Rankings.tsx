@@ -80,7 +80,7 @@ export default function Rankings({ scores, schedule, completedRaces }: Props) {
             <thead>
               <tr>
                 <th style={{ position: 'sticky', left: 0, background: '#161625', zIndex: 1 }}>Player</th>
-                {weeklyRanks.map((r, i) => <th key={i} style={{ fontSize: '0.65em' }}>{r.label as string}</th>)}
+                {weeklyRanks.map((r, i) => <th key={i} style={{ fontSize: '0.65em' }}><div style={{ fontSize: '0.85em', color: '#666' }}>R{completedRaces[i]}</div>{r.label as string}</th>)}
                 <th>Avg</th>
               </tr>
             </thead>
