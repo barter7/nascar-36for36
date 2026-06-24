@@ -122,20 +122,23 @@ export default function PickHistory({ scores, schedule, completedRaces, results,
         }
       }
       return (
-        <td key={r} style={{ cursor: 'pointer' }} onClick={handlePendingClick}>
+        <td key={r} style={{ cursor: 'pointer', background: 'rgba(218,165,32,0.15)' }} onClick={handlePendingClick}>
           <img src={carBadgeUrl(pick!.car_number)} alt={`#${pick!.car_number}`}
             style={{ height: 28 }}
             onError={e => {
               const el = e.target as HTMLImageElement
               el.outerHTML = `<span style="color:#FFD700;font-weight:bold">#${pick!.car_number}</span>`
             }} />
-          <div style={{ fontSize: '0.75em', color: '#555' }}>pending</div>
+          <div style={{ fontSize: '0.75em', color: '#DAA520' }}>pending</div>
         </td>
       )
     }
 
     if (withinRange) {
-      return <td key={r} style={{ fontSize: '1.2em' }} title="Missed pick">😢</td>
+      return <td key={r} style={{ fontSize: '1.2em', background: 'rgba(180,30,30,0.3)', borderRadius: 4 }} title="Missed pick">
+        😢
+        <div style={{ fontSize: '0.6em', color: '#f87171' }}>0</div>
+      </td>
     }
 
     return (
@@ -214,7 +217,7 @@ export default function PickHistory({ scores, schedule, completedRaces, results,
                       if (!sc) {
                         const withinRange = r <= (lastPicked[p] || 0)
                         const hasPick = picksLong.some(pl => pl.participant === p && pl.race_number === r)
-                        if (withinRange && !hasPick) return <td key={r} style={{ fontSize: '1.2em' }}>😢</td>
+                        if (withinRange && !hasPick) return <td key={r} style={{ fontSize: '1.2em', background: 'rgba(180,30,30,0.3)', borderRadius: 4 }}>😢<div style={{ fontSize: '0.6em', color: '#f87171' }}>0</div></td>
                         return <td key={r} style={{ color: '#555' }}>-</td>
                       }
                       const key = `${sc.car_number}-${sc.driver}`
