@@ -1,12 +1,13 @@
 import { useMemo } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { PARTICIPANTS, COLORS, STAGES, type Score, type Schedule, type Result, computeCumulative } from '../data'
+import { PARTICIPANTS, COLORS, STAGES, type Score, type Schedule, type Result, type Driver, type picksToLong, computeCumulative } from '../data'
 
 interface Props {
   scores: Score[]; schedule: Schedule[]; completedRaces: number[]; results: Result[];
+  drivers: Driver[]; picksLong: ReturnType<typeof picksToLong>;
 }
 
-export default function Standings({ scores, schedule, completedRaces, results }: Props) {
+export default function Standings({ scores, schedule, completedRaces, results, drivers, picksLong }: Props) {
   const standings = useMemo(() => {
     const totals = PARTICIPANTS.map(p => {
       const ps = scores.filter(s => s.participant === p)
@@ -38,6 +39,42 @@ export default function Standings({ scores, schedule, completedRaces, results }:
       return row
     }).sort((a, b) => (b.Total as number) - (a.Total as number))
   }, [scores])
+
+  const potential = useMemo(() => {
+    const remaining = 36 - completedRaces.length
+    const avgByCar: Record<number, { total: number; count: number }> = {}
+    for (const r of results) {
+      if (!avgByCar[r.car_number]) avgByCar[r.car_number] = { total: 0, count: 0 }
+      avgByCar[r.car_number].total += r.points
+      avgByCar[r.car_number].count++
+    }
+    return PARTICIPANTS.map(p => {
+      const usedCars = new Set(
+        picksLong.filter(pl => pl.participant === p && completedRaces.includes(pl.race_number)).map(pl => pl.car_number)
+      )
+      const unused = drivers
+        .filter(d => !usedCars.has(d.car_number))
+        .map(d => {
+          const a = avgByCar[d.car_number]
+          return { ...d, avg: a ? a.total / a.count : 0 }
+        })
+        .sort((a, b) => b.avg - a.avg)
+      const kept = unused.slice(0, remaining)
+      const dropped = unused.slice(remaining)
+      const potentialPts = kept.reduce((a, d) => a + d.avg, 0)
+      const current = scores.filter(s => s.participant === p).reduce((a, s) => a + s.points, 0)
+      return {
+        participant: p, current,
+        potential: Math.round(potentialPts),
+        projected: Math.round(current + potentialPts),
+        avgPerRace: remaining > 0 ? potentialPts / remaining : 0,
+        best: kept[0] || null,
+        dropped,
+      }
+    }).sort((a, b) => b.projected - a.projected)
+  }, [scores, results, drivers, picksLong, completedRaces])
+
+  const remainingRaces = 36 - completedRaces.length
 
   const leader = standings[0]
   const bestWeek = useMemo(() => {
@@ -102,6 +139,42 @@ export default function Standings({ scores, schedule, completedRaces, results }:
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
+      <div className="card">
+        <div className="card-header">Rest of Season Potential</div>
+        <div className="card-body" style={{ overflowX: 'auto' }}>
+          <table>
+            <thead>
+              <tr>
+                <th>Player</th><th>Current</th><th>ROS Potential</th><th>Projected Total</th><th>Avg/Race</th><th>Best Unused</th>
+              </tr>
+            </thead>
+            <tbody>
+              {potential.map(pt => (
+                <tr key={pt.participant}>
+                  <td style={{ color: COLORS[pt.participant], fontWeight: 'bold' }}>{pt.participant}</td>
+                  <td>{pt.current}</td>
+                  <td style={{ fontWeight: 'bold', color: '#4ADE80' }}>+{pt.potential}</td>
+                  <td style={{ fontWeight: 'bold', color: '#FFD700' }}>{pt.projected}</td>
+                  <td>{pt.avgPerRace.toFixed(1)}</td>
+                  <td style={{ fontSize: '0.85em' }}>
+                    {pt.best ? `#${pt.best.car_number} ${pt.best.driver} (${pt.best.avg.toFixed(1)})` : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div style={{ fontSize: '0.75em', color: '#888', marginTop: 8 }}>
+            Potential = sum of season average points for each player's best {remainingRaces} unused drivers ({remainingRaces} races left).
+            {potential.some(pt => pt.dropped.length > 0) && (
+              <> Players with missed weeks have more unused drivers than remaining races, so their lowest averages are dropped:
+                {potential.filter(pt => pt.dropped.length > 0).map(pt => (
+                  <span key={pt.participant}> <span style={{ color: COLORS[pt.participant], fontWeight: 'bold' }}>{pt.participant}</span> drops {pt.dropped.map(d => `#${d.car_number} ${d.driver} (${d.avg.toFixed(1)})`).join(', ')}.</span>
+                ))}
+              </>
+            )}
+          </div>
         </div>
       </div>
       <div className="card">
