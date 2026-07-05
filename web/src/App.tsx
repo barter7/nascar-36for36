@@ -88,7 +88,7 @@ export default function App() {
             {tab === 'Roster' && <Roster drivers={drivers} results={results} picksLong={picksLong} />}
             {tab === 'Weekly' && <WeeklyResults scores={scores} schedule={schedule} completedRaces={completedRaces} drivers={drivers} />}
             {tab === 'Rankings' && <Rankings scores={scores} schedule={schedule} completedRaces={completedRaces} />}
-            {tab === 'Drivers' && <DriversUsed drivers={drivers} picksLong={picksLong} scores={scores} schedule={schedule} />}
+            {tab === 'Drivers' && <DriversUsed drivers={drivers} picksLong={picksLong} scores={scores} schedule={schedule} results={results} completedRaces={completedRaces} />}
           </>
         )}
       </div>
