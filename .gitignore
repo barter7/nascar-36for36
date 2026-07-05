@@ -6,3 +6,8 @@
 .Renviron
 rsconnect/
 www/img/
+node_modules
+dist
+web/package-lock.json
+web/public/data/
+web/tsconfig.tsbuildinfo
