@@ -30,13 +30,9 @@ export default function PickHistory({ scores, schedule, completedRaces, results,
     return map
   }, [results])
 
-  const allRaces = useMemo(() => {
-    const maxCompleted = completedRaces.length > 0 ? Math.max(...completedRaces) : 0
-    const nextRace = maxCompleted + 1
-    const races = [...completedRaces]
-    if (nextRace <= 36 && !races.includes(nextRace)) races.push(nextRace)
-    return races
-  }, [completedRaces])
+  const maxCompleted = completedRaces.length > 0 ? Math.max(...completedRaces) : 0
+  const nextRace = maxCompleted + 1
+  const allRaces = useMemo(() => Array.from({ length: 36 }, (_, i) => i + 1), [])
 
   const getAvailableDrivers = useCallback((participant: string, race: number) => {
     const usedCars = picksLong
@@ -69,7 +65,7 @@ export default function PickHistory({ scores, schedule, completedRaces, results,
   const renderPickCell = (p: string, r: number) => {
     const sc = scores.find(s => s.participant === p && s.race_number === r)
     const hasPick = picksLong.some(pl => pl.participant === p && pl.race_number === r)
-    const withinRange = r <= (lastPicked[p] || 0)
+    const withinRange = r <= (lastPicked[p] || 0) && completedRaces.includes(r)
     const isEditing = editing?.participant === p && editing?.race === r
 
     if (isEditing) {
@@ -160,8 +156,9 @@ export default function PickHistory({ scores, schedule, completedRaces, results,
                 <th style={{ position: 'sticky', left: 0, background: '#161625', zIndex: 1 }}>Player</th>
                 {allRaces.map(r => {
                   const label = schedule.find(s => s.race_num === r)?.track_short || `R${r}`
-                  const isNext = !completedRaces.includes(r)
-                  return <th key={r} style={{ minWidth: 55, fontSize: '0.65em', color: isNext ? '#FFD700' : undefined }}><div style={{ fontSize: '0.85em', color: '#666' }}>R{r}</div>{label}{isNext ? ' *' : ''}</th>
+                  const isNext = r === nextRace
+                  const isFuture = r > nextRace
+                  return <th key={r} style={{ minWidth: 55, fontSize: '0.65em', color: isNext ? '#FFD700' : isFuture ? '#777' : undefined }}><div style={{ fontSize: '0.85em', color: '#666' }}>R{r}</div>{label}{isNext ? ' *' : ''}</th>
                 })}
                 <th>Total</th>
               </tr>

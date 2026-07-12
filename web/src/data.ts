@@ -56,12 +56,18 @@ async function loadPicksLive(suffix: string): Promise<Pick[]> {
   if (!suffix) {
     try {
       const res = await fetch('/api/picks?csv=1')
-      if (res.ok) return parsePicks(await res.text())
+      if (res.ok) {
+        const text = await res.text()
+        if (text.startsWith('participant')) return parsePicks(text)
+      }
     } catch {}
   }
   try {
     const res = await fetch(`${GITHUB_RAW}/picks${suffix}.csv?t=${Date.now()}`)
-    if (res.ok) return parsePicks(await res.text())
+    if (res.ok) {
+      const text = await res.text()
+      if (text.startsWith('participant')) return parsePicks(text)
+    }
   } catch {}
   return loadCsv<Pick>(`/data/picks${suffix}.csv`)
 }
