@@ -12,6 +12,18 @@ export default async function handler(req: any, res: any) {
   const token = process.env.GH_TOKEN
 
   if (req.method === 'GET') {
+    if (req.query && req.query.csv) {
+      if (!token) return res.status(404).json({ error: 'GH_TOKEN not set' })
+      const fileRes = await fetch(`https://api.github.com/repos/${REPO}/contents/${FILE_PATH}?ref=${BRANCH}`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.v3+json' },
+      })
+      if (!fileRes.ok) return res.status(502).json({ error: 'Failed to read picks file' })
+      const fileData = await fileRes.json()
+      const content = Buffer.from(fileData.content, 'base64').toString('utf-8')
+      res.setHeader('Content-Type', 'text/csv')
+      res.setHeader('Cache-Control', 'no-store')
+      return res.status(200).send(content)
+    }
     return res.status(200).json({ status: 'picks API is running', hasToken: !!token })
   }
 
@@ -35,16 +47,23 @@ export default async function handler(req: any, res: any) {
     const raceIdx = race
     const isRemove = !car_number || car_number === 0
 
+    let changed = false
     const updatedLines = lines.map((line: string, i: number) => {
       if (i === 0) return line
       const cols = line.split(',')
       if (cols[0] === participant) {
         while (cols.length < 37) cols.push('')
-        cols[raceIdx] = isRemove ? '' : String(car_number)
+        const newVal = isRemove ? '' : String(car_number)
+        if ((cols[raceIdx] || '') !== newVal) changed = true
+        cols[raceIdx] = newVal
         return cols.join(',')
       }
       return line
     })
+
+    if (!changed) {
+      return res.status(200).json({ ok: true, participant, race, car_number: isRemove ? null : car_number, unchanged: true })
+    }
 
     const newContent = updatedLines.join('\n') + '\n'
     const encoded = Buffer.from(newContent).toString('base64')

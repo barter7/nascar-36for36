@@ -48,14 +48,20 @@ async function loadCsv<T>(path: string): Promise<T[]> {
 
 const GITHUB_RAW = 'https://raw.githubusercontent.com/barter7/nascar-36for36/main/data'
 
+function parsePicks(text: string): Pick[] {
+  return Papa.parse<Pick>(text, { header: true, skipEmptyLines: true, dynamicTyping: true }).data
+}
+
 async function loadPicksLive(suffix: string): Promise<Pick[]> {
+  if (!suffix) {
+    try {
+      const res = await fetch('/api/picks?csv=1')
+      if (res.ok) return parsePicks(await res.text())
+    } catch {}
+  }
   try {
     const res = await fetch(`${GITHUB_RAW}/picks${suffix}.csv?t=${Date.now()}`)
-    if (res.ok) {
-      const text = await res.text()
-      const parsed = Papa.parse<Pick>(text, { header: true, skipEmptyLines: true, dynamicTyping: true })
-      return parsed.data
-    }
+    if (res.ok) return parsePicks(await res.text())
   } catch {}
   return loadCsv<Pick>(`/data/picks${suffix}.csv`)
 }
