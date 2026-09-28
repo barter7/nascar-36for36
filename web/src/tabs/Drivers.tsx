@@ -1,14 +1,16 @@
 import { useMemo, useState } from 'react'
-import { PARTICIPANTS, COLORS } from '../data'
+import { PARTICIPANTS, COLORS, MFR_LOGOS, carBadgeUrl, type Driver } from '../data'
 import type { AppData } from '../App'
-import { Avatar, CarBadge } from '../components'
 
 type SortKey = 'avg' | 'form' | 'car'
+const SORTS: { key: SortKey; label: string }[] = [
+  { key: 'avg', label: 'Season avg' },
+  { key: 'form', label: 'Last 5' },
+  { key: 'car', label: 'Car #' },
+]
 
-function lastName(name: string) {
-  const parts = name.split(' ')
-  const suffix = /^(jr\.?|sr\.?|ii|iii)$/i.test(parts[parts.length - 1] ?? '')
-  return parts.slice(suffix ? -2 : -1).join(' ')
+function hideOnError(e: React.SyntheticEvent<HTMLImageElement>) {
+  e.currentTarget.style.display = 'none'
 }
 
 export default function Drivers({ data }: { data: AppData }) {
@@ -17,7 +19,7 @@ export default function Drivers({ data }: { data: AppData }) {
   const [focus, setFocus] = useState<string | null>(null)
   const [sort, setSort] = useState<SortKey>('avg')
 
-  const rows = useMemo(() => {
+  const sorted = useMemo(() => {
     const val = (car: number) => {
       const c = cars[car]
       if (sort === 'car') return -car
@@ -31,26 +33,69 @@ export default function Drivers({ data }: { data: AppData }) {
     })
   }, [drivers, cars, sort])
 
-  const focusStat = focus ? players.find(p => p.participant === focus) : null
+  const usedDone = (p: string, car: number) => {
+    const race = usedBy[p].get(car)
+    return race !== undefined && completed.includes(race)
+  }
+
   const counted = useMemo(() => {
     if (!focus) return new Set<number>()
-    const done = new Set(completed)
     const available = drivers
-      .filter(d => cars[d.car_number]?.active !== false)
-      .filter(d => { const r = usedBy[focus].get(d.car_number); return r === undefined || !done.has(r) })
+      .filter(d => cars[d.car_number]?.active !== false && !usedDone(focus, d.car_number))
       .sort((a, b) => (cars[b.car_number]?.avg ?? 0) - (cars[a.car_number]?.avg ?? 0))
     return new Set(available.slice(0, remaining).map(d => d.car_number))
   }, [focus, drivers, cars, usedBy, completed, remaining])
 
-  const pointsFor = (p: string, car: number) => {
+  const pickPoints = (p: string, car: number) => {
     const race = usedBy[p].get(car)
     if (race === undefined) return null
-    return { race, pts: scores.find(s => s.participant === p && s.race_number === race)?.points }
+    const pts = scores.find(s => s.participant === p && s.race_number === race)?.points
+    return pts ?? (completed.includes(race) ? 0 : '…')
   }
 
-  const header = (key: SortKey, label: string, title?: string) => (
-    <th className={`sortable${sort === key ? ' sorted' : ''}`} onClick={() => setSort(key)} title={title}>{label}</th>
-  )
+  const focusStat = focus ? players.find(p => p.participant === focus) : null
+
+  const card = (d: Driver) => {
+    const c = cars[d.car_number]
+    const inactive = c?.active === false
+    const dim = inactive || (focus ? usedDone(focus, d.car_number) : false)
+    const wontFit = focus && !dim && !counted.has(d.car_number)
+    return (
+      <div key={d.car_number} className={`driver-card${dim ? ' dim' : ''}`}>
+        <div className="driver-card-badges">
+          {PARTICIPANTS.map(p => {
+            const pts = pickPoints(p, d.car_number)
+            return pts === null
+              ? <span key={p} className="pick-badge empty" title={`${p}: available`} />
+              : <span key={p} className="pick-badge" style={{ background: COLORS[p] }} title={`${p}: ${pts} pts`}>{pts}</span>
+          })}
+        </div>
+        <div className="driver-card-img">
+          <div className="driver-card-fallback">#{d.car_number}</div>
+          {d.headshot_url && <img className="driver-card-photo" src={d.headshot_url} alt="" onError={hideOnError} />}
+          <div className="driver-card-number"><img src={carBadgeUrl(d.car_number)} alt={`#${d.car_number}`} onError={hideOnError} /></div>
+          {MFR_LOGOS[d.manufacturer] && (
+            <div className="driver-card-mfr"><img src={MFR_LOGOS[d.manufacturer]} alt={d.manufacturer} onError={hideOnError} /></div>
+          )}
+          <div className="driver-card-overlay">
+            <div className="driver-card-name">{d.driver}</div>
+            <div className="driver-card-team">{d.team}</div>
+          </div>
+        </div>
+        <div className="driver-card-info">
+          {inactive ? <span className="muted">Inactive since R{c?.lastRace}</span> : c ? (
+            <>
+              <span>{c.avg.toFixed(1)} <small>avg</small></span>
+              <span className={c.form != null && c.form > c.avg + 3 ? 'pos' : c.form != null && c.form < c.avg - 3 ? 'neg' : ''}>
+                {c.form != null ? c.form.toFixed(0) : '—'} <small>L5</small>
+              </span>
+            </>
+          ) : <span className="muted">No races yet</span>}
+        </div>
+        {wontFit && <div className="driver-card-flag">won't fit</div>}
+      </div>
+    )
+  }
 
   return (
     <>
@@ -71,63 +116,22 @@ export default function Drivers({ data }: { data: AppData }) {
       )}
 
       <div className="card">
-        <div className="card-header"><span>Driver Pool</span><span className="card-sub">{focus ? `${focus}'s used cars dimmed` : 'where each car has been used'}</span></div>
-        <div className="table-scroll">
-          <table className="drivers">
-            <thead>
-              <tr>
-                {header('car', 'Driver')}
-                {header('avg', 'Avg', 'Season average points')}
-                {header('form', 'L5', 'Average over the last 5 races')}
-                {PARTICIPANTS.map(p => <th key={p} style={{ color: COLORS[p] }}>{p.slice(0, 2)}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(d => {
-                const c = cars[d.car_number]
-                const inactive = c?.active === false
-                const usedByFocus = focus ? usedBy[focus].has(d.car_number) && completed.includes(usedBy[focus].get(d.car_number)!) : false
-                const dropped = focus && !usedByFocus && !inactive && !counted.has(d.car_number)
-                return (
-                  <tr key={d.car_number} className={usedByFocus || inactive ? 'dim' : ''}>
-                    <td className="left">
-                      <div className="driver-cell">
-                        <Avatar driver={d} car={d.car_number} size={30} />
-                        <div>
-                          <div className="nowrap">
-                            <CarBadge car={d.car_number} height={14} />{' '}
-                            <span className="full-name">{d.driver}</span><span className="short-name">{lastName(d.driver)}</span>
-                          </div>
-                          <div className="sub">
-                            {inactive ? `inactive since R${c?.lastRace}` : d.team}
-                            {dropped && <span className="tag">won't fit</span>}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="strong">{c ? c.avg.toFixed(1) : '—'}</td>
-                    <td className={c?.form != null && c.form > c.avg + 3 ? 'pos' : c?.form != null && c.form < c.avg - 3 ? 'neg' : ''}>
-                      {c?.form != null ? c.form.toFixed(0) : '—'}
-                    </td>
-                    {PARTICIPANTS.map(p => {
-                      const u = pointsFor(p, d.car_number)
-                      return (
-                        <td key={p} className="used-cell">
-                          {u ? (
-                            <span className="used-chip" style={{ '--c': COLORS[p] } as React.CSSProperties}>
-                              R{u.race}<small>{u.pts ?? '…'}</small>
-                            </span>
-                          ) : <span className="muted">·</span>}
-                        </td>
-                      )
-                    })}
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+        <div className="card-header">
+          <span>Driver Pool</span>
+          <div className="sort-toggle">
+            {SORTS.map(s => (
+              <button key={s.key} className={sort === s.key ? 'active' : ''} onClick={() => setSort(s.key)}>{s.label}</button>
+            ))}
+          </div>
         </div>
-        <div className="footnote">Avg includes every race the car ran, whoever drove it. L5 is shaded when it's 3+ points above or below the season average. Cars that miss 3 straight races are marked inactive and left out of projections.</div>
+        <div className="card-body">
+          <div className="driver-grid">{sorted.map(card)}</div>
+        </div>
+        <div className="footnote">
+          Top badges show the points each player scored with that car (empty = still available).
+          {focus ? ` ${focus}'s used cars are dimmed.` : ''} L5 is the last-5-race average, shaded when 3+ points off the season average.
+          Cars that miss 3 straight races are marked inactive and left out of projections.
+        </div>
       </div>
     </>
   )

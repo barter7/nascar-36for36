@@ -344,41 +344,119 @@ th.sticky-col { background: var(--bg-head); z-index: 3; }
   font-size: 14px;
   line-height: 1.5;
 }
-.drivers td { padding: 5px 4px; }
-.drivers td.left { padding-left: 10px; }
-.drivers tr.dim { opacity: 0.35; }
-.driver-cell { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.driver-cell .sub { font-size: 11px; color: var(--muted); white-space: nowrap; }
-.sortable { cursor: pointer; }
-.sortable.sorted { text-decoration: underline; text-underline-offset: 3px; }
-.used-cell { width: 44px; }
-.short-name { display: none; }
-.used-chip {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 36px;
-  padding: 1px 4px;
+.sort-toggle { display: flex; gap: 2px; }
+.sort-toggle button {
+  font-size: 12px;
+  padding: 3px 7px;
   border-radius: 5px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.sort-toggle button.active { background: var(--gold); border-color: var(--gold); color: #000; }
+
+.driver-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 18px 10px;
+  padding-top: 10px;
+}
+.driver-card {
+  position: relative;
+  border-radius: 10px;
+  border: 2px solid var(--border);
+  background: #12121f;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  transition: opacity 0.15s;
+}
+.driver-card.dim { opacity: 0.32; }
+.driver-card-badges {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  gap: 3px;
+}
+.pick-badge {
+  min-width: 26px;
+  height: 22px;
+  padding: 0 4px;
+  border-radius: 11px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 22px;
+  text-align: center;
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+.pick-badge.empty { background: #23233a; border: 1px solid #3a3a55; box-shadow: none; }
+.driver-card-img {
+  position: relative;
+  height: 180px;
+  border-radius: 8px 8px 0 0;
+  overflow: hidden;
+  background: linear-gradient(160deg, #23233e, #141424);
+}
+.driver-card-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 40px;
+  font-weight: 700;
+  color: rgba(255, 215, 0, 0.35);
+}
+.driver-card-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+.driver-card-number { position: absolute; top: 6px; left: 6px; }
+.driver-card-number img { height: 32px; filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.8)); }
+.driver-card-mfr { position: absolute; top: 8px; right: 6px; }
+.driver-card-mfr img { height: 20px; max-width: 48px; object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)); }
+.driver-card-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 18px 8px 6px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
+}
+.driver-card-name { font-size: 15px; font-weight: 700; color: #fff; line-height: 1.1; }
+.driver-card-team { font-size: 11px; color: #bbb; }
+.driver-card-info {
+  display: flex;
+  justify-content: space-around;
+  padding: 5px 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--gold);
+  border-top: 1px solid var(--border);
+}
+.driver-card-info small { font-size: 10px; font-weight: 400; color: var(--muted); }
+.driver-card-info .pos { color: var(--pos); }
+.driver-card-info .neg { color: var(--neg); }
+.driver-card-flag {
+  position: absolute;
+  top: 44px;
+  right: -2px;
+  padding: 1px 6px;
+  border-radius: 4px 0 0 4px;
   font-size: 11px;
   font-weight: 700;
-  line-height: 1.15;
   color: #fff;
-  background: color-mix(in srgb, var(--c) 70%, #000);
+  background: rgba(200, 50, 50, 0.9);
 }
-.used-chip small { font-size: 10px; font-weight: 400; opacity: 0.9; }
 
 @media (max-width: 480px) {
   .navbar-title { font-size: 13px; letter-spacing: 1px; }
   .tabs-status { display: none; }
   .content { padding: 8px; }
   .stat-value { font-size: 15px; }
-  .driver-cell .avatar { display: none; }
-  .driver-cell .sub { max-width: 96px; overflow: hidden; text-overflow: ellipsis; }
-  .full-name { display: none; }
-  .short-name { display: inline; }
-  .drivers td { padding: 5px 2px; }
-  .drivers td.left { padding-left: 8px; }
-  .used-cell { width: 40px; }
-  .used-chip { min-width: 32px; padding: 1px 2px; }
+  .driver-grid { grid-template-columns: repeat(2, 1fr); gap: 18px 8px; }
+  .driver-card-img { height: 170px; }
+  .card-header:has(.sort-toggle) { flex-wrap: wrap; }
 }
