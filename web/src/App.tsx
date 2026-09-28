@@ -1,34 +1,40 @@
-import { useState, useEffect, useCallback } from 'react'
-import { loadData, picksToLong, computeScores, getLastPickedRace, type Driver, type Result, type Schedule, type Score, type Pick } from './data'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { loadData, picksToLong, computeScores, getLastPickedRace, type Driver, type Result, type Schedule, type PickLong } from './data'
+import { buildStats, type Stats } from './stats'
 import Standings from './tabs/Standings'
-import Roster from './tabs/Roster'
-import WeeklyResults from './tabs/WeeklyResults'
-import PickHistory from './tabs/PickHistory'
-import Rankings from './tabs/Rankings'
-import DriversUsed from './tabs/DriversUsed'
+import Weekly from './tabs/Weekly'
+import Picks from './tabs/Picks'
+import Drivers from './tabs/Drivers'
 
-const TABS = ['Picks', 'Standings', 'Roster', 'Weekly', 'Rankings', 'Drivers']
+const TABS = ['Picks', 'Standings', 'Weekly', 'Drivers'] as const
+type Tab = typeof TABS[number]
+const ALIASES: Record<string, Tab> = { roster: 'Drivers', rankings: 'Standings' }
 
-function getTabFromHash(): string {
-  const hash = window.location.hash.replace('#', '')
-  if (hash && TABS.some(t => t.toLowerCase() === hash.toLowerCase())) {
-    return TABS.find(t => t.toLowerCase() === hash.toLowerCase())!
-  }
-  return TABS[0]
+function getTabFromHash(): Tab {
+  const hash = window.location.hash.replace('#', '').toLowerCase()
+  return TABS.find(t => t.toLowerCase() === hash) ?? ALIASES[hash] ?? 'Picks'
+}
+
+export interface AppData {
+  year: number; drivers: Driver[]; results: Result[]; schedule: Schedule[];
+  picks: PickLong[]; scores: ReturnType<typeof computeScores>;
+  lastPicked: Record<string, number>; stats: Stats;
+  trackName: (race: number) => string;
+  raceLabel: (race: number) => string;
+  driverFor: (car: number) => Driver | undefined;
 }
 
 export default function App() {
   const [year, setYear] = useState(2026)
-  const [tab, setTab] = useState(getTabFromHash)
+  const [tab, setTab] = useState<Tab>(getTabFromHash)
   const [drivers, setDrivers] = useState<Driver[]>([])
   const [results, setResults] = useState<Result[]>([])
   const [schedule, setSchedule] = useState<Schedule[]>([])
-  const [scores, setScores] = useState<Score[]>([])
-  const [picksLong, setPicksLong] = useState<ReturnType<typeof picksToLong>>([])
+  const [picks, setPicks] = useState<PickLong[]>([])
   const [lastPicked, setLastPicked] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
 
-  const setTabWithHash = useCallback((t: string) => {
+  const selectTab = useCallback((t: Tab) => {
     setTab(t)
     window.location.hash = t.toLowerCase()
   }, [])
@@ -45,58 +51,66 @@ export default function App() {
       setDrivers(d.drivers)
       setResults(d.results)
       setSchedule(d.schedule)
-      const pl = picksToLong(d.picks)
-      setPicksLong(pl)
-      setScores(computeScores(pl, d.results))
+      setPicks(picksToLong(d.picks))
       setLastPicked(getLastPickedRace(d.picks))
       setLoading(false)
     })
   }, [year])
 
   const handlePickSaved = useCallback((participant: string, race: number, carNumber: number | null) => {
-    setPicksLong(prev => {
-      const filtered = prev.filter(p => !(p.participant === participant && p.race_number === race))
-      const updated = carNumber ? [...filtered, { participant, race_number: race, car_number: carNumber }] : filtered
-      setScores(computeScores(updated, results))
-      return updated
+    setPicks(prev => {
+      const others = prev.filter(p => !(p.participant === participant && p.race_number === race))
+      return carNumber ? [...others, { participant, race_number: race, car_number: carNumber }] : others
     })
-    if (carNumber) {
-      setLastPicked(prev => ({ ...prev, [participant]: Math.max(prev[participant] || 0, race) }))
-    }
-  }, [results])
+    if (carNumber) setLastPicked(prev => ({ ...prev, [participant]: Math.max(prev[participant] || 0, race) }))
+  }, [])
 
-  const completedRaces = [...new Set(results.map(r => r.race_number))].sort((a, b) => a - b)
+  const data = useMemo<AppData>(() => {
+    const scores = computeScores(picks, results)
+    const trackNames = new Map(schedule.map(s => [s.race_num, s.track_short]))
+    const driverMap = new Map(drivers.map(d => [d.car_number, d]))
+    return {
+      year, drivers, results, schedule, picks, scores, lastPicked,
+      stats: buildStats(drivers, results, picks, scores),
+      trackName: r => trackNames.get(r) || '',
+      raceLabel: r => [`R${r}`, trackNames.get(r)].filter(Boolean).join(' · '),
+      driverFor: c => driverMap.get(c),
+    }
+  }, [year, drivers, results, schedule, picks, lastPicked])
+
+  const { completed, nextRace } = data.stats
+  const lastRace = completed[completed.length - 1]
 
   return (
     <>
       <nav className="navbar">
-        <div className="navbar-title">
-          NASCAR 36 for 36
-          <div style={{ display: 'flex', gap: 4 }}>
-            <button className={`year-btn ${year === 2026 ? 'active' : ''}`} onClick={() => setYear(2026)}>2026</button>
-            <button className={`year-btn ${year === 2025 ? 'active' : ''}`} onClick={() => setYear(2025)}>2025</button>
-          </div>
+        <div className="navbar-title">NASCAR 36 for 36</div>
+        <div className="year-toggle">
+          {[2026, 2025].map(y => (
+            <button key={y} className={`year-btn ${year === y ? 'active' : ''}`} onClick={() => setYear(y)}>{y}</button>
+          ))}
         </div>
       </nav>
       <div className="tabs">
         {TABS.map(t => (
-          <button key={t} className={`tab ${tab === t ? 'active' : ''}`} onClick={() => setTabWithHash(t)}>{t}</button>
+          <button key={t} className={`tab ${tab === t ? 'active' : ''}`} onClick={() => selectTab(t)}>{t}</button>
         ))}
-      </div>
-      <div className="content">
-        {loading ? (
-          <div className="loading">Loading data...</div>
-        ) : (
-          <>
-            {tab === 'Picks' && <PickHistory scores={scores} schedule={schedule} completedRaces={completedRaces} results={results} lastPicked={lastPicked} picksLong={picksLong} drivers={drivers} onPickSaved={handlePickSaved} />}
-            {tab === 'Standings' && <Standings scores={scores} schedule={schedule} completedRaces={completedRaces} results={results} drivers={drivers} picksLong={picksLong} />}
-            {tab === 'Roster' && <Roster drivers={drivers} results={results} picksLong={picksLong} />}
-            {tab === 'Weekly' && <WeeklyResults scores={scores} schedule={schedule} completedRaces={completedRaces} drivers={drivers} />}
-            {tab === 'Rankings' && <Rankings scores={scores} schedule={schedule} completedRaces={completedRaces} />}
-            {tab === 'Drivers' && <DriversUsed drivers={drivers} picksLong={picksLong} scores={scores} schedule={schedule} results={results} completedRaces={completedRaces} />}
-          </>
+        {!loading && lastRace && (
+          <span className="tabs-status">
+            Thru R{lastRace}{nextRace && year === 2026 ? ` · Next: ${data.raceLabel(nextRace)}` : ''}
+          </span>
         )}
       </div>
+      <main className="content">
+        {loading ? <div className="loading">Loading…</div> : (
+          <>
+            {tab === 'Picks' && <Picks data={data} onPickSaved={handlePickSaved} />}
+            {tab === 'Standings' && <Standings data={data} />}
+            {tab === 'Weekly' && <Weekly data={data} />}
+            {tab === 'Drivers' && <Drivers data={data} />}
+          </>
+        )}
+      </main>
     </>
   )
 }

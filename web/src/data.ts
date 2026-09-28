@@ -7,6 +7,8 @@ export interface Driver {
 export interface Result {
   race_number: number; car_number: number; driver: string;
   finish_pos: number; points: number;
+  start_pos?: number | null; laps_led?: number | null; stage_pts?: number | null;
+  calc?: number | null;
 }
 export interface Schedule {
   race_num: number; date: string; track: string; track_short: string;
@@ -14,9 +16,11 @@ export interface Schedule {
 export interface Pick {
   participant: string; [key: string]: string | number | undefined;
 }
-export interface Score {
+export interface Score extends Result {
+  participant: string;
+}
+export interface PickLong {
   participant: string; race_number: number; car_number: number;
-  driver: string; finish_pos: number; points: number;
 }
 
 export const PARTICIPANTS = ['Mike', 'Matt', 'Brian', 'Tom'] as const
@@ -24,9 +28,6 @@ export type Participant = typeof PARTICIPANTS[number]
 
 export const COLORS: Record<string, string> = {
   Mike: '#E41A1C', Matt: '#377EB8', Brian: '#4DAF4A', Tom: '#FF7F00',
-}
-export const INITIALS: Record<string, string> = {
-  Mike: 'MT', Matt: 'MD', Brian: 'BM', Tom: 'TM',
 }
 
 export const MFR_LOGOS: Record<string, string> = {
@@ -41,6 +42,7 @@ export function carBadgeUrl(car: number) {
 
 async function loadCsv<T>(path: string): Promise<T[]> {
   const res = await fetch(path)
+  if (!res.ok) return []
   const text = await res.text()
   const parsed = Papa.parse<T>(text, { header: true, skipEmptyLines: true, dynamicTyping: true })
   return parsed.data
@@ -79,7 +81,7 @@ export async function loadData(year: number) {
     loadCsv<Result>(`/data/results${suffix}.csv`),
     year === 2025
       ? Promise.resolve(Array.from({ length: 36 }, (_, i) => ({
-          race_num: i + 1, date: '', track: `Race ${i + 1}`, track_short: `R${i + 1}`,
+          race_num: i + 1, date: '', track: '', track_short: '',
         })))
       : loadCsv<Schedule>('/data/schedule.csv'),
     loadPicksLive(suffix),
@@ -87,8 +89,8 @@ export async function loadData(year: number) {
   return { drivers, results, schedule, picks }
 }
 
-export function picksToLong(picks: Pick[]): { participant: string; race_number: number; car_number: number }[] {
-  const out: { participant: string; race_number: number; car_number: number }[] = []
+export function picksToLong(picks: Pick[]): PickLong[] {
+  const out: PickLong[] = []
   for (const p of picks) {
     for (let r = 1; r <= 36; r++) {
       const val = p[`race_${r}`]
@@ -113,7 +115,7 @@ export function getLastPickedRace(picks: Pick[]): Record<string, number> {
   return result
 }
 
-export function computeScores(picksLong: ReturnType<typeof picksToLong>, results: Result[]): Score[] {
+export function computeScores(picksLong: PickLong[], results: Result[]): Score[] {
   const rMap = new Map<string, Result>()
   for (const r of results) rMap.set(`${r.race_number}-${r.car_number}`, r)
   const scores: Score[] = []
@@ -122,24 +124,6 @@ export function computeScores(picksLong: ReturnType<typeof picksToLong>, results
     if (r) scores.push({ participant: p.participant, ...r })
   }
   return scores
-}
-
-export function computeCumulative(scores: Score[]) {
-  const byParticipant: Record<string, { race_number: number; points: number; car_number: number }[]> = {}
-  for (const s of scores) {
-    if (!byParticipant[s.participant]) byParticipant[s.participant] = []
-    byParticipant[s.participant].push({ race_number: s.race_number, points: s.points, car_number: s.car_number })
-  }
-  const result: { participant: string; race_number: number; cumulative: number; car_number: number }[] = []
-  for (const [p, races] of Object.entries(byParticipant)) {
-    races.sort((a, b) => a.race_number - b.race_number)
-    let cum = 0
-    for (const r of races) {
-      cum += r.points
-      result.push({ participant: p, race_number: r.race_number, cumulative: cum, car_number: r.car_number })
-    }
-  }
-  return result
 }
 
 export const STAGES = [
